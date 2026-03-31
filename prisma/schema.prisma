@@ -1,0 +1,43 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  // Note: Standard output is usually just the default node_modules/.prisma/client
+  // but keeping your custom output path if required.
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model inventory_distribution {
+  student_id            Int       @id @default(autoincrement())
+  doc_no                String?   @db.VarChar(255)
+  doc_date              DateTime? @db.Timestamp(6)
+  branch_code           String?   @db.VarChar(50)
+  student_name          String?   @db.VarChar(255)
+  package               String?   @db.VarChar(50)
+  type                  String?   @db.VarChar(50)
+  remark                String?   @db.VarChar(255) // 👈 Added the Remark column we created
+  
+  sk_prep               Boolean?  @default(false)
+  sk_prep_date          DateTime? @db.Timestamp(6)
+  eg_prep               Boolean?  @default(false)
+  eg_prep_date          DateTime? @db.Timestamp(6)
+  bm_pickup             Boolean?  @default(false)
+  bm_pickup_date        DateTime? @db.Timestamp(6)
+  student_received      Boolean?  @default(false)
+  student_received_date DateTime? @db.Timestamp(6)
+
+  // --- BARCODE LOGIC SYNCED WITH HEIDISQL ---
+  
+  // SK Barcode: Always exists, 6-digit padded
+  barcode_sk            String?   @default(dbgenerated("((((branch_code)::text || '-SK-'::text) || lpad((student_id)::text, 6, '0'::text)))")) @db.VarChar
+
+  // EG Barcode: Must match the CASE logic (9M/12M only)
+  // We use dbgenerated to match the SQL formula exactly so Prisma knows it's handled by Postgres
+  barcode_eg            String?   @default(dbgenerated("(CASE WHEN ((package)::text ILIKE '9M%'::text) OR ((package)::text ILIKE '12M%'::text) THEN (((branch_code)::text || '-EG-'::text) || lpad((student_id)::text, 6, '0'::text)) ELSE NULL::text END)")) @db.VarChar
+
+  @@unique([doc_no, student_name])
+}
