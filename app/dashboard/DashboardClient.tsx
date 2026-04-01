@@ -31,6 +31,21 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
     return `${y}-${m}-${d}`;
   };
 
+  // --- NEW: Week Date Logic ---
+  const getThisWeekRange = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Start on Monday
+    const monday = new Date(today.getTime());
+    monday.setDate(diff);
+    
+    return {
+      start: formatDateForInput(monday),
+      end: formatDateForInput(today) // Up to today
+    };
+  };
+
   const getThisMonthRange = () => {
     const today = new Date();
     const start = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -40,13 +55,16 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
     };
   };
 
-  const monthRange = getThisMonthRange();
+  // Set default range to THIS WEEK
+  const weekRange = getThisWeekRange();
 
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
-  const [selectedType, setSelectedType] = useState('New'); 
-  const [quickDate, setQuickDate] = useState('thisMonth');
-  const [startDate, setStartDate] = useState(monthRange.start);
-  const [endDate, setEndDate] = useState(monthRange.end);
+  const [selectedType, setSelectedType] = useState('NEW'); 
+  
+  // DEFAULT SETTINGS UPDATED
+  const [quickDate, setQuickDate] = useState('thisWeek');
+  const [startDate, setStartDate] = useState(weekRange.start);
+  const [endDate, setEndDate] = useState(weekRange.end);
 
   const handleInstantSync = () => {
     setIsSyncing(true);
@@ -57,7 +75,7 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
   const BRANCHES = useMemo(() => {
     const expectedBranches = [
       'ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 
-      'ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'KW', 'TSG'
+      'ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'KW', 'TSG', 'HQ'
     ]; 
     const rawDbBranches = Array.from(new Set(dbData.map(d => d.branch)));
     const allUnique = Array.from(new Set([...expectedBranches, ...rawDbBranches]));
@@ -66,10 +84,28 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
 
   useEffect(() => { setHasMounted(true); }, []);
 
+  // --- UPDATED: Date Switch Logic ---
   const handleDropdownChange = (val: string) => {
     setQuickDate(val);
     const today = new Date(); 
+    today.setHours(0, 0, 0, 0);
+
     switch (val) {
+      case 'thisWeek': {
+        const range = getThisWeekRange();
+        setStartDate(range.start);
+        setEndDate(range.end);
+        break;
+      }
+      case 'lastWeek': {
+        const end = new Date(today.getTime());
+        end.setDate(today.getDate() - today.getDay()); // Previous Sunday
+        const start = new Date(end.getTime());
+        start.setDate(end.getDate() - 6); // Previous Monday
+        setStartDate(formatDateForInput(start));
+        setEndDate(formatDateForInput(end));
+        break;
+      }
       case 'thisMonth': {
         const range = getThisMonthRange();
         setStartDate(range.start);
@@ -90,18 +126,18 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
     }
   };
 
-  // --- SYNCED FILTER LOGIC ---
   const filteredData = useMemo(() => {
     let data = [...dbData]; 
-    if (selectedBranch !== 'All Branches') data = data.filter((item) => item.branch === selectedBranch);
-    if (selectedType !== 'All') data = data.filter((item) => item.studentType === selectedType);
+    
+    if (selectedBranch !== 'All Branches') {
+      data = data.filter((item) => item.branch === selectedBranch);
+    }
+    
+    if (selectedType !== 'All') {
+      data = data.filter((item) => item.studentType.toUpperCase() === selectedType.toUpperCase());
+    }
     
     return data.filter((item) => {
-      // Logic: Only NEW students have Enrollment Gifts. 
-      // Filter out EG items for non-new students to keep targets accurate.
-      const isEG = item.itemType.toUpperCase().includes('GIFT') || item.itemType.toUpperCase().includes('EG');
-      if (isEG && item.studentType !== 'New') return false;
-
       if (startDate && endDate) return item.date >= startDate && item.date <= endDate;
       return true; 
     });
@@ -165,27 +201,30 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
                 onChange={(e) => setSelectedType(e.target.value)}
                 className="bg-emerald-50 border-none rounded-lg px-4 py-2 text-xs font-black text-emerald-700 outline-none cursor-pointer"
               >
-                <option value="New">New Students</option>
-                <option value="Renewal">Renewals</option>
-                <option value="Trial">Trials</option>
+                <option value="NEW">New Students</option>
+                <option value="RENEWAL">Renewals</option>
+                <option value="TRIAL">Trials</option>
                 <option value="All">All Types</option>
               </select>
 
               <div className="h-5 w-px bg-slate-200 mx-1"></div>
 
+             {/* UPDATED: Dropdown Options */}
              <select
                 value={quickDate}
                 onChange={(e) => handleDropdownChange(e.target.value)}
                 className="bg-slate-100 border-none rounded-lg px-4 py-2 text-xs font-black text-slate-700 outline-none cursor-pointer"
               >
+                <option value="thisWeek">This Week</option>
+                <option value="lastWeek">Last Week</option>
                 <option value="thisMonth">This Month</option>
                 <option value="lastMonth">Last Month</option>
                 <option value="all">All Time</option>
               </select>
               <div className="flex items-center gap-3 px-4 border-l border-slate-100">
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="text-[10px] font-bold text-slate-500 bg-transparent outline-none" />
+                <input type="date" value={startDate} onChange={e => {setStartDate(e.target.value); setQuickDate('custom');}} className="text-[10px] font-bold text-slate-500 bg-transparent outline-none" />
                 <span className="text-slate-300 text-[10px] font-black">TO</span>
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="text-[10px] font-bold text-slate-500 bg-transparent outline-none" />
+                <input type="date" value={endDate} onChange={e => {setEndDate(e.target.value); setQuickDate('custom');}} className="text-[10px] font-bold text-slate-500 bg-transparent outline-none" />
               </div>
           </div>
         </div>

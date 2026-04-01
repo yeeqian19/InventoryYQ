@@ -21,13 +21,13 @@ type InventoryItem = {
 export default function BranchDashboardClient({ initialData }: { initialData: InventoryItem[] }) {
   const router = useRouter();
   
-  // Master list of all 20 branches
+  // Master list of all 21 branches (HQ Added)
   const BRANCHES = useMemo(() => {
     const expectedBranches = [
       'ST', 'SA', 'PJY', 'AMP', 'CJY', 
       'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 
       'ONL', 'SP', 'KD', 'DA', 'DK', 
-      'BTHO', 'EGR', 'BSP', 'KW', 'TSG'
+      'BTHO', 'EGR', 'BSP', 'KW', 'TSG', 'HQ' // <-- Added HQ here
     ]; 
     const rawDbBranches = Array.from(new Set(initialData?.map(d => d.branch) || []));
     const allUnique = Array.from(new Set([...expectedBranches, ...rawDbBranches]));
@@ -274,33 +274,49 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
                   )}
 
                   <div className="flex flex-col w-full max-w-xs gap-3">
-                    {/* HIDDEN FILE INPUT TO OPEN NATIVE CAMERA */}
+                    {/* DUAL BUTTON LAYOUT (CAMERA OR UPLOAD) */}
                     <input 
                       type="file" 
                       accept="image/*" 
-                      capture="environment" // Forces the native camera to open
+                      capture="environment" 
                       onChange={handlePhotoCapture} 
                       className="hidden" 
                       id="cameraInput"
                     />
-                    <label 
-                      htmlFor="cameraInput"
-                      className="w-full text-center py-3 bg-white border-2 border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 cursor-pointer hover:bg-slate-50 transition-colors"
-                    >
-                      {capturedPhoto ? 'Retake Photo' : 'Open Camera'}
-                    </label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handlePhotoCapture} 
+                      className="hidden" 
+                      id="uploadInput"
+                    />
+
+                    <div className="flex gap-2 w-full">
+                      <label 
+                        htmlFor="cameraInput"
+                        className="flex-1 text-center py-3 bg-white border-2 border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 cursor-pointer hover:bg-slate-50 transition-colors"
+                      >
+                        📸 Camera
+                      </label>
+                      <label 
+                        htmlFor="uploadInput"
+                        className="flex-1 text-center py-3 bg-white border-2 border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 cursor-pointer hover:bg-slate-50 transition-colors"
+                      >
+                        📁 Upload
+                      </label>
+                    </div>
 
                     <button 
                       onClick={() => submitToDatabase(pendingHandoverBarcode, capturedPhoto)}
                       disabled={!capturedPhoto || isProcessing}
-                      className="w-full py-3 bg-emerald-500 rounded-xl text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:shadow-none transition-all"
+                      className="w-full py-3 bg-emerald-500 rounded-xl text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:shadow-none transition-all mt-2"
                     >
                       {isProcessing ? 'Saving...' : 'Complete Handover'}
                     </button>
                     
                     <button 
                       onClick={() => {setPendingHandoverBarcode(''); setCapturedPhoto(null);}}
-                      className="text-[10px] font-bold text-slate-400 uppercase mt-2 hover:text-slate-600"
+                      className="text-[10px] font-bold text-slate-400 uppercase mt-1 hover:text-slate-600"
                     >
                       Cancel
                     </button>
@@ -372,7 +388,7 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
                 <div className="h-full flex flex-col items-center justify-center p-10 text-center opacity-50">
                   <span className="text-4xl mb-4">✨</span>
                   <p className="text-xs font-black uppercase tracking-widest text-slate-500">Queue is empty!</p>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-2">Nothing to process here.</p>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-2">All students served.</p>
                 </div>
               ) : (
                 <ul className="divide-y divide-slate-50">
@@ -381,7 +397,7 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
                       <div>
                         <h4 className="font-black text-slate-900 text-sm lg:text-lg leading-none tracking-tight">{item.name}</h4>
                         <div className="flex items-center gap-2 mt-2 lg:mt-3">
-                          <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase">{item.type}</span>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${item.type === 'SK' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>{item.type}</span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.pkg}</span>
                         </div>
                       </div>
