@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      /* 🟢 FIXED: Pointing to 'prisma' directly, matching your actual sidebar */
+      ".prisma/client": ["./lib/generated/prisma"] 
     }
   },
   "include": [
@@ -29,7 +31,8 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    "./lib/generated/prisma"
+    /* 🟢 FIXED: Pointing to index.d.ts directly inside the prisma folder */
+    "./lib/generated/prisma/index.d.ts"
   ],
   "exclude": ["node_modules"]
 }

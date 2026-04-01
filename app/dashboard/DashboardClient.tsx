@@ -19,7 +19,22 @@ type InventoryItem = {
   studentType: string; 
 };
 
-export default function DashboardClient({ dbData }: { dbData: InventoryItem[] }) {
+// 🟢 NEW: Define the User type to match your NextAuth session
+type DashboardUser = {
+  name?: string | null;
+  email?: string | null;
+  role?: string | null;
+  branch_name?: string | null;
+};
+
+// 🟢 UPDATED: Accept 'user' in the props
+export default function DashboardClient({ 
+  dbData, 
+  user 
+}: { 
+  dbData: InventoryItem[], 
+  user?: DashboardUser 
+}) {
   const [hasMounted, setHasMounted] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const router = useRouter();
@@ -31,18 +46,17 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
     return `${y}-${m}-${d}`;
   };
 
-  // --- NEW: Week Date Logic ---
   const getThisWeekRange = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Start on Monday
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); 
     const monday = new Date(today.getTime());
     monday.setDate(diff);
     
     return {
       start: formatDateForInput(monday),
-      end: formatDateForInput(today) // Up to today
+      end: formatDateForInput(today) 
     };
   };
 
@@ -55,13 +69,11 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
     };
   };
 
-  // Set default range to THIS WEEK
   const weekRange = getThisWeekRange();
 
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
   const [selectedType, setSelectedType] = useState('NEW'); 
   
-  // DEFAULT SETTINGS UPDATED
   const [quickDate, setQuickDate] = useState('thisWeek');
   const [startDate, setStartDate] = useState(weekRange.start);
   const [endDate, setEndDate] = useState(weekRange.end);
@@ -84,7 +96,6 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
 
   useEffect(() => { setHasMounted(true); }, []);
 
-  // --- UPDATED: Date Switch Logic ---
   const handleDropdownChange = (val: string) => {
     setQuickDate(val);
     const today = new Date(); 
@@ -99,9 +110,9 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
       }
       case 'lastWeek': {
         const end = new Date(today.getTime());
-        end.setDate(today.getDate() - today.getDay()); // Previous Sunday
+        end.setDate(today.getDate() - today.getDay()); 
         const start = new Date(end.getTime());
-        start.setDate(end.getDate() - 6); // Previous Monday
+        start.setDate(end.getDate() - 6); 
         setStartDate(formatDateForInput(start));
         setEndDate(formatDateForInput(end));
         break;
@@ -151,7 +162,7 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
   const chartData = useMemo(() => {
     const grouped: Record<string, any> = {};
     filteredData.forEach((item) => {
-      const typeKey = item.itemType.toUpperCase().includes('KIT') ? 'Starter Kit (SK)' : 'Enrollment Gift (EG)';
+      const typeKey = item.itemType; 
       if (!grouped[typeKey]) grouped[typeKey] = { name: typeKey, prepared: 0, unprepared: 0 };
       grouped[typeKey].prepared += item.prepared;
       grouped[typeKey].unprepared += item.unprepared;
@@ -167,6 +178,13 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
       {/* 1. BRANCH SELECTOR */}
       <div className="w-56 flex-shrink-0">
         <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-5 sticky top-6 max-h-[90vh] overflow-y-auto no-scrollbar">
+          {/* 🟢 NEW: User Profile Display */}
+          <div className="mb-8 px-2 pb-6 border-b border-slate-50">
+             <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Authenticated as</p>
+             <p className="text-sm font-black text-slate-900 truncate">{user?.name || 'Staff'}</p>
+             <p className="text-[9px] font-bold text-slate-400 uppercase">{user?.role || 'User'}</p>
+          </div>
+
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 px-2 text-center">Branch Selector</h3>
           <div className="flex flex-col gap-2">
             {BRANCHES.map((branch) => (
@@ -196,7 +214,7 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
           </div>
 
           <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm scale-95 origin-right">
-             <select
+              <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
                 className="bg-emerald-50 border-none rounded-lg px-4 py-2 text-xs font-black text-emerald-700 outline-none cursor-pointer"
@@ -209,8 +227,7 @@ export default function DashboardClient({ dbData }: { dbData: InventoryItem[] })
 
               <div className="h-5 w-px bg-slate-200 mx-1"></div>
 
-             {/* UPDATED: Dropdown Options */}
-             <select
+              <select
                 value={quickDate}
                 onChange={(e) => handleDropdownChange(e.target.value)}
                 className="bg-slate-100 border-none rounded-lg px-4 py-2 text-xs font-black text-slate-700 outline-none cursor-pointer"

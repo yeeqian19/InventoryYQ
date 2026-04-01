@@ -296,7 +296,7 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
                         htmlFor="cameraInput"
                         className="flex-1 text-center py-3 bg-white border-2 border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 cursor-pointer hover:bg-slate-50 transition-colors"
                       >
-                        📸 Camera
+                        📸 Take Photo
                       </label>
                       <label 
                         htmlFor="uploadInput"
