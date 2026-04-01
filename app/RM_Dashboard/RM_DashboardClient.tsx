@@ -15,9 +15,15 @@ type StudentData = {
   student_received: boolean;
   type: string;
   package: string;
-  hasEG: boolean; // <--- ADDED: Synced directly from page.tsx logic
+  hasSK: boolean; 
+  hasEG: boolean; 
+  giftType?: string | null; 
   created_at?: string;
 };
+
+// Moved constants outside the component to prevent unnecessary re-renders and dependency warnings
+const R2 = ['ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 'HQ'];
+const R3 = ['ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'TSG', 'KW'];
 
 export default function RM_DashboardClient({ initialData }: { initialData: StudentData[] }) {
   const router = useRouter();
@@ -28,16 +34,10 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
   const [branchSearch, setBranchSearch] = useState('');
   const [studentSearch, setStudentSearch] = useState(''); 
   
-  // DATE STATES
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
   const [rangeSelect, setRangeSelect] = useState('this-month'); 
 
-  // Added HQ to R2. Move to R3 if that fits your company structure better!
-  const R2 = ['ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 'HQ'];
-  const R3 = ['ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'TSG', 'KW'];
-
-  // Helper to format Date to YYYY-MM-DD
   const toDateString = (date: Date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -45,7 +45,6 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
     return `${y}-${m}-${d}`;
   };
 
-  // --- LOGIC: UPDATE INPUTS BASED ON QUICK SELECT ---
   const calculateDates = (range: string) => {
     const now = new Date();
     let start = new Date();
@@ -97,10 +96,11 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
     if (activeType !== 'ALL') {
       filtered = filtered.filter(s => s.type?.toUpperCase() === activeType.toUpperCase());
     }
+    
+    // We still filter the students based on region, but we will no longer use this to dictate which rows show up
     if (activeRegion === 'R2') filtered = filtered.filter(s => R2.includes(s.branch));
     if (activeRegion === 'R3') filtered = filtered.filter(s => R3.includes(s.branch));
 
-    // DATE FILTERING
     if (fromDate || toDate) {
       const dStart = fromDate ? new Date(fromDate) : null;
       const dEnd = toDate ? new Date(toDate) : null;
@@ -116,25 +116,32 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
       filtered = filtered.filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
     }
 
-    const names = Array.from(new Set(filtered.map(s => s.branch))).sort();
-    const finalNames = names.filter(n => n.toLowerCase().includes(branchSearch.toLowerCase()));
+    // ALWAYS show branches based on the selected Region toggle, regardless of student count
+    let allBranchNames: string[] = [];
+    if (activeRegion === 'R2') allBranchNames = R2;
+    else if (activeRegion === 'R3') allBranchNames = R3;
+    else allBranchNames = [...R2, ...R3]; // ALL regions
+
+    // Apply the branch search filter and sort them alphabetically
+    const finalNames = allBranchNames
+      .filter(n => n.toLowerCase().includes(branchSearch.toLowerCase()))
+      .sort();
 
     return finalNames.map(name => {
       const students = filtered.filter(s => s.branch === name);
       let bTarget = 0; let bPrep = 0; let bPickup = 0; let bReceived = 0;
 
       students.forEach(s => {
-        // Now strictly trusting the backend logic
-        const hasEG = s.hasEG;
-
-        if (itemToggle === 'ALL' || itemToggle === 'SK') {
+        // Only count SK targets if the student is eligible for an SK
+        if (s.hasSK && (itemToggle === 'ALL' || itemToggle === 'SK')) {
           bTarget += 1;
           if (s.sk_prep) bPrep += 1;
           if (s.bm_pickup) bPickup += 1;
           if (s.student_received) bReceived += 1;
         }
 
-        if (hasEG && (itemToggle === 'ALL' || itemToggle === 'EG')) {
+        // Only count EG targets if the student is eligible for an EG
+        if (s.hasEG && (itemToggle === 'ALL' || itemToggle === 'EG')) {
           bTarget += 1;
           if (s.eg_prep) bPrep += 1;
           if (s.bm_pickup) bPickup += 1;
@@ -142,12 +149,12 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
         }
       });
 
+      // Filter the UI list to only show students who actually have targets for the selected toggle
       const displayedList = students.filter(s => {
-        if (itemToggle === 'SK') return true;
+        if (itemToggle === 'SK') return s.hasSK;
         if (itemToggle === 'EG') return s.hasEG;
+        if (itemToggle === 'ALL') return s.hasSK || s.hasEG; // Exclude those with 0 items to pack
         return true; 
-      }).map(st => {
-        return { ...st, isDoubleEligible: st.hasEG };
       });
 
       return { name, total: bTarget, prep: bPrep, pickup: bPickup, received: bReceived, list: displayedList };
@@ -180,7 +187,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
               <div className="bg-slate-900 text-white p-5 rounded-[2rem] flex items-center gap-5 px-8 shadow-2xl border-b-8 border-emerald-500 min-w-[240px]">
                  <div className="bg-emerald-500/20 p-3 rounded-2xl"><Users size={28} className="text-emerald-400" /></div>
                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-40">{itemToggle} Target</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest opacity-40">{itemToggle} Target Units</p>
                     <p className="text-5xl font-black italic leading-none">{totalUnits}</p>
                  </div>
               </div>
@@ -311,35 +318,56 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                       <tr className="bg-slate-50/40 border-t border-slate-100">
                         <td colSpan={5} className="px-12 py-10">
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                            {row.list.map(s => {
-                              let isPrepared = s.sk_prep;
-                              if (itemToggle === 'EG') isPrepared = s.eg_prep;
-                              if (itemToggle === 'ALL') isPrepared = s.sk_prep && (s.isDoubleEligible ? s.eg_prep : true);
+                            {row.list.length > 0 ? (
+                               row.list.map(s => {
+                                // Determine strict item status visualization
+                                let isPrepared = false;
+                                if (itemToggle === 'EG') isPrepared = s.eg_prep;
+                                else if (itemToggle === 'SK') isPrepared = s.sk_prep;
+                                else if (itemToggle === 'ALL') {
+                                  const skDone = s.hasSK ? s.sk_prep : true;
+                                  const egDone = s.hasEG ? s.eg_prep : true;
+                                  isPrepared = skDone && egDone;
+                                }
 
-                              return (
-                                <div 
-                                  key={s.student_id} 
-                                  className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-2 hover:shadow-md transition-all border-l-8"
-                                  style={{ borderLeftColor: isPrepared ? '#10b981' : '#fb7185' }}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${s.student_received ? 'bg-purple-500' : s.bm_pickup ? 'bg-emerald-500' : isPrepared ? 'bg-blue-500' : 'bg-rose-300'}`} />
-                                    {/* FIX: Ensure name renders fallback cleanly */}
-                                    <span className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tighter">
-                                      {s.name || 'NAME PENDING'}
-                                    </span>
+                                // Create smart sub-labels indicating exactly what they get
+                                let itemText = '';
+                                if (itemToggle === 'EG') itemText = `EG Only (${s.giftType})`;
+                                else if (itemToggle === 'SK') itemText = 'Starter Kit Only';
+                                else {
+                                  if (s.hasSK && s.hasEG) itemText = `2 Items (SK + ${s.giftType})`;
+                                  else if (s.hasSK) itemText = '1 Item (SK)';
+                                  else if (s.hasEG) itemText = `1 Item (${s.giftType})`;
+                                }
+
+                                return (
+                                  <div 
+                                    key={s.student_id} 
+                                    className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-2 hover:shadow-md transition-all border-l-8"
+                                    style={{ borderLeftColor: isPrepared ? '#10b981' : '#fb7185' }}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${s.student_received ? 'bg-purple-500' : s.bm_pickup ? 'bg-emerald-500' : isPrepared ? 'bg-blue-500' : 'bg-rose-300'}`} />
+                                      <span className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tighter">
+                                        {s.name}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col pl-6">
+                                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">
+                                        {itemText}
+                                      </span>
+                                      <span className="text-[8px] font-bold text-blue-500 uppercase mt-1">
+                                        {s.package === "NONE" || !s.package ? "NO PACKAGE" : `PKG: ${s.package}`}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="flex flex-col pl-6">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">
-                                      {itemToggle === 'EG' ? 'Enroll Gift Only' : itemToggle === 'SK' ? 'Starter Kit Only' : `${s.isDoubleEligible ? 2 : 1} Items Total`}
-                                    </span>
-                                    <span className="text-[8px] font-bold text-blue-500 uppercase mt-1">
-                                      {s.package === "NONE" || !s.package ? "NO PACKAGE" : `PKG: ${s.package}`}
-                                    </span>
-                                  </div>
+                                );
+                              })
+                            ) : (
+                                <div className="col-span-full py-6 text-center text-slate-400 font-bold text-sm italic">
+                                  No targeted students found for this branch based on current filters.
                                 </div>
-                              );
-                            })}
+                            )}
                           </div>
                         </td>
                       </tr>

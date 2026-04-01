@@ -1,5 +1,3 @@
-// app/RM_Dashboard/page.tsx
-
 import prisma from '@/lib/db'; 
 import RM_DashboardClient from './RM_DashboardClient';
 
@@ -28,26 +26,33 @@ export default async function RMDashboardPage() {
       },
     });
 
-    // 3. MAPPING & SYNCHRONIZATION LOGIC
+    // 3. MAPPING & EXACT SYNCED LOGIC
     const serializedData = data.map((item) => {
-      // Standardize Student Type
-      const studentType = item.type?.toUpperCase() || 'NEW';
       
-      // Clean Package String (Trim spaces, make uppercase for consistency)
+      const rawType = (item.type || '').trim().toUpperCase();
       const pkg = item.package ? item.package.toString().trim().toUpperCase() : "";
       
+      // A. Strictly determine Student Type
+      let studentType = 'NEW';
+      if (rawType.includes('RENEWAL')) studentType = 'RENEWAL';
+      else if (rawType.includes('TRIAL')) studentType = 'TRIAL';
+
       // Clean Student Name
       const cleanName = item.student_name && item.student_name.trim() !== "" 
         ? item.student_name.trim() 
         : "NAME MISSING";
 
-      // --- SYNC LOGIC UPDATED FOR "12M" / "9M" ---
-      const isEligibleType = studentType === "NEW" || studentType === "RENEWAL";
-      
-      // Use startsWith to catch "12M", "12 Months", "9M" or just "9"/"12"
-      const isDoublePackage = pkg.startsWith("9") || pkg.startsWith("12");
-      
-      const hasEG = isEligibleType && isDoublePackage;
+      // B. SK & EG Eligibility Rules
+      // Rule 1: SK is ONLY for NEW students
+      const hasSK = studentType === "NEW";
+
+      // Rule 2: EG is ONLY for NEW students with 9M or 12M
+      const is9M = /\b9\b/.test(pkg) || pkg.includes('9M');
+      const is12M = /\b12\b/.test(pkg) || pkg.includes('12M');
+      const hasEG = studentType === "NEW" && (is9M || is12M);
+
+      // Rule 3: Determine exact gift type for the UI
+      const giftType = hasEG ? (is9M ? 'LEGO' : 'SMARTWATCH') : null;
 
       return {
         student_id: item.student_id.toString(),
@@ -59,7 +64,9 @@ export default async function RMDashboardPage() {
         student_received: !!item.student_received,
         type: studentType, 
         package: pkg,
+        hasSK: hasSK, // Added to strictly control SK counts
         hasEG: hasEG, 
+        giftType: giftType, // Passes "LEGO" or "SMARTWATCH" to UI
         created_at: item.doc_date ? item.doc_date.toISOString() : undefined,
       };
     });

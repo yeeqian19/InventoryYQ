@@ -2,37 +2,40 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 
-// 1. UPDATED NAVIGATION ITEMS
 const allNavItems = [
-  // ✅ CHANGED: Name is now 'Dashboard' to match your green HQ page
-  { name: 'Dashboard', href: '/dashboard', icon: '📦', adminOnly: true },
+  // 🟢 FIXED: Changed href to '/dashboard' to match your folder name
+  { name: 'Dashboard', href: '/dashboard', icon: '📦', roles: ['SUPERADMIN', 'ADMIN'] },
   
-  { name: 'Student Manager', href: '/student-manager', icon: '👥', adminOnly: true },
-  { name: 'Scan & Approve', href: '/scan-approve', icon: '📷', adminOnly: false },
-  { name: 'Scan Log', href: '/scan-log', icon: '📋', adminOnly: false },
+  // 🟢 Student Manager
+  { name: 'Student Manager', href: '/student-manager', icon: '👥', roles: ['SUPERADMIN', 'ADMIN'] },
+  
+  // 🔴 REMOVED: Stock Management was here
+  
+  // 🟢 Scan Tools (Visible to everyone)
+  { name: 'Scan & Approve', href: '/scan-approve', icon: '📷', roles: ['SUPERADMIN', 'ADMIN', 'BRANCH'] },
+  { name: 'Scan Log', href: '/scan-log', icon: '📋', roles: ['SUPERADMIN', 'ADMIN', 'BRANCH'] },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const lowerPath = pathname.toLowerCase();
+  
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || 'BRANCH';
+  const userName = session?.user?.name || session?.user?.email?.split('@')[0] || 'User';
 
-  const [userRole] = useState<'HQ' | 'BRANCH'>('HQ');
+  const visibleItems = allNavItems.filter(item => 
+    item.roles.includes(userRole)
+  );
 
-  const visibleItems = allNavItems.filter(item => {
-    if (userRole === 'BRANCH' && item.adminOnly) return false;
-    return true;
-  });
-
-  // ✅ HIDE LOGIC
-  // Sidebar stays visible for /dashboard (HQ), Scan Approve, etc.
-  // Sidebar hides completely for RM_Dashboard (White Bar Chart page)
+  // 🛑 HIDE LOGIC: Sidebar only shows inside actual tool pages
   const shouldHide = 
     pathname === '/' || 
+    lowerPath === '/login' || 
     lowerPath.includes('rm_dashboard') || 
-    lowerPath.includes('inventory-branch') ||
-    lowerPath.includes('stock-management');
+    lowerPath.includes('inventory-branch');
 
   if (shouldHide) return null;
 
@@ -40,31 +43,32 @@ export default function Sidebar() {
     <aside className="w-64 h-screen fixed left-0 top-0 bg-[#7cb342] text-white shadow-2xl z-[100] print:hidden">
       <div className="flex flex-col h-full">
         
-        {/* BRANDING SECTION */}
+        {/* BRANDING */}
         <div className="p-8">
           <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">
             My Inventory
           </h1>
-          <p className="text-[10px] font-bold opacity-50 tracking-[0.2em] mt-2 border-t border-white/20 pt-2">
-            {userRole === 'HQ' ? 'CENTRAL ADMINISTRATION' : 'BRANCH TERMINAL'}
+          <p className="text-[10px] font-bold opacity-50 tracking-[0.2em] mt-2 border-t border-white/20 pt-2 uppercase">
+            {userRole === 'BRANCH' ? 'BRANCH TERMINAL' : 'CENTRAL ADMINISTRATION'}
           </p>
         </div>
 
-        {/* CONTROL PANEL BUTTON */}
+        {/* EXIT TO CONTROL PANEL */}
         <div className="px-4 mb-4">
           <Link 
             href="/" 
-            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all group no-underline"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all group no-underline text-white"
           >
             <span className="text-lg group-hover:-translate-x-1 transition-transform">⬅️</span>
-            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white">Control Panel</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.15em]">Control Panel</span>
           </Link>
         </div>
 
-        {/* DYNAMIC NAVIGATION LINKS */}
+        {/* NAVIGATION */}
         <nav className="flex-1 py-4 space-y-2">
           {visibleItems.map((item) => {
-            const isActive = lowerPath === item.href.toLowerCase();
+            // Check if active based on new /dashboard path
+            const isActive = lowerPath.startsWith(item.href.toLowerCase());
             
             return (
               <Link
@@ -92,15 +96,17 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* USER PROFILE FOOTER */}
+        {/* USER PROFILE */}
         <div className="p-6 border-t border-white/10 bg-black/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white text-[#7cb342] flex items-center justify-center font-black shadow-inner shrink-0">
-              {userRole === 'HQ' ? 'HQ' : 'BR'}
+            <div className="w-10 h-10 rounded-full bg-white text-[#7cb342] flex items-center justify-center font-black shadow-inner shrink-0 uppercase">
+              {userRole.substring(0, 2)}
             </div>
-            <div className="overflow-hidden text-white">
-              <p className="text-sm font-black truncate leading-none">Ashwin</p>
-              <p className="text-[9px] text-white/50 uppercase tracking-widest mt-1 font-bold">System Admin</p>
+            <div className="overflow-hidden text-white text-left">
+              <p className="text-sm font-black truncate leading-none capitalize">{userName}</p>
+              <p className="text-[9px] text-white/50 uppercase tracking-widest mt-1 font-bold">
+                {userRole === 'SUPERADMIN' ? 'System Admin' : userRole}
+              </p>
             </div>
           </div>
         </div>
