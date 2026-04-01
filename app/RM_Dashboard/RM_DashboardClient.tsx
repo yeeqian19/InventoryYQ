@@ -15,6 +15,7 @@ type StudentData = {
   student_received: boolean;
   type: string;
   package: string;
+  hasEG: boolean; // <--- ADDED: Synced directly from page.tsx logic
   created_at?: string;
 };
 
@@ -32,7 +33,8 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
   const [toDate, setToDate] = useState<string>('');
   const [rangeSelect, setRangeSelect] = useState('this-month'); 
 
-  const R2 = ['ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG'];
+  // Added HQ to R2. Move to R3 if that fits your company structure better!
+  const R2 = ['ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 'HQ'];
   const R3 = ['ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'TSG', 'KW'];
 
   // Helper to format Date to YYYY-MM-DD
@@ -122,10 +124,8 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
       let bTarget = 0; let bPrep = 0; let bPickup = 0; let bReceived = 0;
 
       students.forEach(s => {
-        const pkgStr = s.package?.toString().toUpperCase().trim() || "";
-        const isDoublePkg = pkgStr.startsWith("12") || pkgStr.startsWith("9");
-        const isEligibleType = s.type?.toUpperCase() === "NEW" || s.type?.toUpperCase() === "RENEWAL";
-        const hasEG = isEligibleType && isDoublePkg;
+        // Now strictly trusting the backend logic
+        const hasEG = s.hasEG;
 
         if (itemToggle === 'ALL' || itemToggle === 'SK') {
           bTarget += 1;
@@ -143,17 +143,11 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
       });
 
       const displayedList = students.filter(s => {
-        const pkgStr = s.package?.toString().toUpperCase().trim() || "";
-        const isDoublePkg = pkgStr.startsWith("12") || pkgStr.startsWith("9");
-        const isEligibleType = s.type?.toUpperCase() === "NEW" || s.type?.toUpperCase() === "RENEWAL";
-        const hasEG = isEligibleType && isDoublePkg;
         if (itemToggle === 'SK') return true;
-        if (itemToggle === 'EG') return hasEG;
+        if (itemToggle === 'EG') return s.hasEG;
         return true; 
       }).map(st => {
-        const p = st.package?.toString().toUpperCase().trim() || "";
-        const isDbl = (p.startsWith("12") || p.startsWith("9")) && (st.type?.toUpperCase() !== "TRIAL");
-        return { ...st, isDoubleEligible: isDbl };
+        return { ...st, isDoubleEligible: st.hasEG };
       });
 
       return { name, total: bTarget, prep: bPrep, pickup: bPickup, received: bReceived, list: displayedList };
@@ -329,14 +323,19 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                                   style={{ borderLeftColor: isPrepared ? '#10b981' : '#fb7185' }}
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className={`w-3 h-3 rounded-full ${s.student_received ? 'bg-purple-500' : s.bm_pickup ? 'bg-emerald-500' : isPrepared ? 'bg-blue-500' : 'bg-rose-300'}`} />
-                                    <span className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tighter">{s.name}</span>
+                                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${s.student_received ? 'bg-purple-500' : s.bm_pickup ? 'bg-emerald-500' : isPrepared ? 'bg-blue-500' : 'bg-rose-300'}`} />
+                                    {/* FIX: Ensure name renders fallback cleanly */}
+                                    <span className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tighter">
+                                      {s.name || 'NAME PENDING'}
+                                    </span>
                                   </div>
                                   <div className="flex flex-col pl-6">
                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">
                                       {itemToggle === 'EG' ? 'Enroll Gift Only' : itemToggle === 'SK' ? 'Starter Kit Only' : `${s.isDoubleEligible ? 2 : 1} Items Total`}
                                     </span>
-                                    <span className="text-[8px] font-bold text-blue-500 uppercase mt-1">SK: {s.package || 'None'}</span>
+                                    <span className="text-[8px] font-bold text-blue-500 uppercase mt-1">
+                                      {s.package === "NONE" || !s.package ? "NO PACKAGE" : `PKG: ${s.package}`}
+                                    </span>
                                   </div>
                                 </div>
                               );
