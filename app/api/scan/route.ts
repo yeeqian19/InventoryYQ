@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { logScanAction } from '@/lib/logger'; // 👈 NEW: Imported the logger
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,47 +34,70 @@ export async function POST(request: NextRequest) {
     const isSKBarcode = record.barcode_sk?.toUpperCase().includes(trimmedBarcode);
     const isEGBarcode = record.barcode_eg?.toUpperCase().includes(trimmedBarcode);
 
-    // --- DUPLICATE CHECK ---
-    if (stationNum === 1 && ((isSKBarcode && record.sk_prep) || (isEGBarcode && record.eg_prep))) {
-        return NextResponse.json({ error: 'ALREADY SCANNED AT PACKING', student_name: record.student_name }, { status: 400 });
-    } else if (stationNum === 2 && record.bm_pickup) {
-        return NextResponse.json({ error: 'ALREADY PICKED UP', student_name: record.student_name }, { status: 400 });
-    } else if (stationNum === 3 && record.student_received) {
-        return NextResponse.json({ error: 'ALREADY RECEIVED BY STUDENT', student_name: record.student_name }, { status: 400 });
-    }
-
-    // Photo upload for station 3 is handled by /api/inventory
-    const savedFileName = null;
-
-    // --- DATABASE UPDATE ---
+    // --- SETUP ATOMIC LOCK & UPDATE DATA ---
     let updateData: any = {};
+    let lockCondition: any = {};
+    let actionTypeForLogger: 'PREPARED' | 'PICKED UP' | 'RECEIVED' = 'PREPARED';
+
     if (stationNum === 1) {
-      updateData = isSKBarcode 
-        ? { sk_prep: true, sk_prep_date: new Date() } 
-        : { eg_prep: true, eg_prep_date: new Date() };
-    } else if (stationNum === 2) {
+      if (isSKBarcode) {
+        updateData = { sk_prep: true, sk_prep_date: new Date() };
+        lockCondition = { sk_prep: false }; // Lock
+      } else {
+        updateData = { eg_prep: true, eg_prep_date: new Date() };
+        lockCondition = { eg_prep: false }; // Lock
+      }
+      actionTypeForLogger = 'PREPARED';
+    } 
+    else if (stationNum === 2) {
       updateData = { bm_pickup: true, bm_pickup_date: new Date() };
-    } else if (stationNum === 3) {
+      lockCondition = { bm_pickup: false }; // Lock
+      actionTypeForLogger = 'PICKED UP';
+    } 
+    else if (stationNum === 3) {
       updateData = { 
         student_received: true, 
         student_received_date: new Date(),
-        proof_photo: savedFileName 
+        proof_photo: null 
       };
+      lockCondition = { student_received: false }; // Lock
+      actionTypeForLogger = 'RECEIVED';
     }
 
-    const updatedRecord = await db.inventory_distribution.update({
-      where: { student_id: record.student_id },
+    // --- DATABASE UPDATE WITH ATOMIC LOCK ---
+    const updateResult = await (db.inventory_distribution as any).updateMany({
+      where: { 
+        student_id: record.student_id,
+        ...lockCondition // 👈 The Bouncer! Prevents double-scans perfectly
+      },
       data: updateData,
+    });
+
+    // If count is 0, the lock blocked it (already scanned)
+    if (updateResult.count === 0) {
+      return NextResponse.json({ error: 'ALREADY SCANNED / PROCESSED', student_name: record.student_name }, { status: 400 });
+    }
+
+    // --- 🚨 RECORD THE SCAN IN THE AUDIT TRAIL LOG 🚨 ---
+    await logScanAction({
+      docNo: record.doc_no || 'N/A',
+      barcode: trimmedBarcode,
+      studentName: record.student_name || 'Unknown',
+      itemType: isSKBarcode ? 'SK' : 'EG',
+      branch: record.branch_code || 'HQ', // Defaults to HQ if missing
+      actionType: actionTypeForLogger,
+      // Assigns processedBy based on the station number
+      processedBy: stationNum === 1 ? 'Ashwin (HQ)' : (stationNum === 2 ? 'BM (Approve)' : 'Admin (Approve)'),
     });
 
     return NextResponse.json({
       success: true,
-      message: `${updatedRecord.student_name} approved!`,
-      student_name: updatedRecord.student_name,
+      message: `${record.student_name} approved!`,
+      student_name: record.student_name,
       station: stationNum,
-      photoSaved: !!savedFileName,
+      photoSaved: false,
       itemType: isSKBarcode ? 'Starter Kit (SK)' : 'Enrollment Gift (EG)',
-      branch: updatedRecord.branch_code ?? 'N/A',
+      branch: record.branch_code ?? 'N/A',
     }, { status: 200 });
 
   } catch (error: any) {

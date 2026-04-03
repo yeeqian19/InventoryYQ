@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function LoginClient() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // 🟢 Added state for toggle
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -50,21 +51,38 @@ export default function LoginClient() {
               type="email"
               placeholder="Email"
               required
-              className="w-full rounded-lg border border-slate-700 bg-[#0f172a] px-4 py-3 text-white focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-700 bg-[#0f172a] px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-all"
               onChange={(e) => setEmail(e.target.value)}
             />
-            <input
-              type="password"
-              placeholder="Password"
-              required
-              className="w-full rounded-lg border border-slate-700 bg-[#0f172a] px-4 py-3 text-white focus:border-emerald-500 focus:outline-none"
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            
+            {/* Password Container */}
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"} // 🟢 Toggle type
+                placeholder="Password"
+                required
+                className="w-full rounded-lg border border-slate-700 bg-[#0f172a] px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-all"
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              {/* Show/Hide Button */}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-400 transition-colors"
+              >
+                {showPassword ? (
+                  <span className="text-sm font-bold uppercase tracking-tighter">Hide</span>
+                ) : (
+                  <span className="text-sm font-bold uppercase tracking-tighter">Show</span>
+                )}
+              </button>
+            </div>
           </div>
+          
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all"
+            className="w-full rounded-lg bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all shadow-lg shadow-emerald-900/20"
           >
             {loading ? "AUTHENTICATING..." : "SIGN IN"}
           </button>
