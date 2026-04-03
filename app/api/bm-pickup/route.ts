@@ -82,8 +82,6 @@ export async function POST(req: Request) {
     });
 
     // Step D: Build and send the HTML email
-    const base64Only = base64Data.replace(/^data:image\/\w+;base64,/, '');
-
     const html = generateEmailHTML({
       title: '✅ BM Pick Up Confirmed',
       detailsArray: [
@@ -106,14 +104,7 @@ export async function POST(req: Request) {
       to: process.env.NOTIFY_EMAIL,
       subject: `✅ BM Pick Up Confirmed – ${branchCode || record.branch_code} / ${barcode}`,
       html,
-      attachments: [
-        {
-          filename: fileName,
-          content: base64Only,
-          encoding: 'base64',
-          contentType: 'image/jpeg',
-        },
-      ],
+      // 🚨 The heavy attachment array has been completely removed!
     });
 
     return NextResponse.json({
