@@ -21,10 +21,15 @@ model inventory_distribution {
   eg_prep_date          DateTime? @db.Timestamp(6)
   bm_pickup             Boolean?  @default(false)
   bm_pickup_date        DateTime? @db.Timestamp(6)
+  bm_pickup_photo       String?   // Google Drive link for BM Pickup photo proof
   student_received      Boolean?  @default(false)
   student_received_date DateTime? @db.Timestamp(6)
   barcode_sk            String?   @default(dbgenerated("(((branch_code)::text || '-SK-'::text) || lpad((student_id)::text, 6, '0'::text))")) @db.VarChar
   remark                String?   @db.VarChar(255)
+  
+  // ✅ NEW COLUMN ADDED HERE
+  proof_photo           String?   
+
   barcode_eg            String?   @default(dbgenerated("\nCASE\n    WHEN (((package)::text ~~* '9M%'::text) OR ((package)::text ~~* '12M%'::text)) THEN (((branch_code)::text || '-EG-'::text) || lpad((student_id)::text, 6, '0'::text))\n    ELSE NULL::text\nEND")) @db.VarChar(255)
 
   @@unique([doc_no, student_name])
@@ -39,4 +44,18 @@ model users {
   branch_name   String?   @db.VarChar(100)
   created_at    DateTime? @default(now()) @db.Timestamptz(6)
   name          String?
+}
+
+model ScanLog {
+  id           String   @id @default(uuid())
+  timestamp    DateTime @default(now())
+  doc_no       String?  // Optional, like 'INV-1001'
+  barcode      String
+  student_name String
+  item_type    String   // 'SK' or 'EG'
+  branch       String
+  action_type  String   // 'PREPARED', 'PICKED UP', 'RECEIVED'
+  processed_by String   // e.g., 'Ashwin (HQ)' or 'Siti (BM)'
+
+  @@map("scan_log")
 }

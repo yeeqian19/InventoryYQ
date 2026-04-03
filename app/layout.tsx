@@ -14,7 +14,6 @@ export default function RootLayout({
   const lowerPath = pathname.toLowerCase();
 
   // 1. If the path contains these words, we want NO SIDEBAR and NO HQ LAYOUT
-  // 🟢 Added '/login' here so the login page stays clean
   const isSpecialPage = 
     lowerPath === '/' || 
     lowerPath === '/login' || 
@@ -43,7 +42,9 @@ export default function RootLayout({
           <div className="flex">
             {/* This is what shows 'Dashboard, Scan Approve, Scan Log' */}
             <Sidebar /> 
-            <main className="flex-1 ml-64 min-h-screen p-8">
+            
+            {/* 🟢 FIXED: ml-0 on mobile, ml-64 on desktop. Added pt-24 for mobile top bar padding! */}
+            <main className="flex-1 min-h-screen ml-0 lg:ml-64 p-4 pt-24 lg:p-8">
               <div className="max-w-[1600px] mx-auto">
                 {children}
               </div>

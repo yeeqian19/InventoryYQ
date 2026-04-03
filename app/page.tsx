@@ -2,20 +2,22 @@ import React from 'react';
 import Link from 'next/link';
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
-import { redirect } from "next/navigation";
+import LoginClient from "./login/LoginClient";
+import LogoutButton from "./components/LogoutButton";
 
-export default async function ControlPanel() {
+export default async function RootPage() {
   const session = await getServerSession(authOptions);
 
-  // 1. Protection: If not logged in, go to login
+  // Not logged in → show login page
   if (!session) {
-    redirect("/login");
+    return <LoginClient />;
   }
 
+  // Get user info from session
   const role = (session?.user as any)?.role || "BRANCH";
-  const userName = session?.user?.name || "Ashwin";
+  const userName = session?.user?.name || "User";
 
-  // 2. Define Menu Items with Role Requirements
+  // RBAC Menu Logic
   const allMenuItems = [
     { 
       name: 'MY INVENTORY HQ', 
@@ -36,7 +38,7 @@ export default async function ControlPanel() {
       icon: '📍', 
       color: '#00a65a', 
       href: '/inventory-branch', 
-      roles: ['SUPERADMIN', 'BRANCH'] // Hidden for ADMIN
+      roles: ['SUPERADMIN', 'BRANCH'] 
     },
     { 
       name: 'STOCK MANAGEMENT', 
@@ -47,15 +49,14 @@ export default async function ControlPanel() {
     },
   ];
 
-  // 3. Filter items: Only show icons if user's role is in the allowed list
   const visibleItems = allMenuItems.filter(item => item.roles.includes(role));
 
   return (
     <div style={{ backgroundColor: '#f3f7f9', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'sans-serif' }}>
-      
       <div style={{ backgroundColor: 'white', borderRadius: '50px', boxShadow: '0 15px 40px rgba(0,0,0,0.08)', padding: '60px 40px', maxWidth: '900px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        
-        <div style={{ border: '2px solid #2563eb', color: '#2563eb', borderRadius: '50px', padding: '4px 20px', fontSize: '11px', fontWeight: '900', letterSpacing: '2px', marginBottom: '25px' }}>
+
+        {/* ROLE BADGE */}
+        <div style={{ border: '2px solid #2563eb', color: '#2563eb', borderRadius: '50px', padding: '4px 20px', fontSize: '11px', fontWeight: '900', letterSpacing: '2px', marginBottom: '25px', textTransform: 'uppercase' }}>
           {role} PORTAL
         </div>
 
@@ -66,6 +67,7 @@ export default async function ControlPanel() {
           Welcome back, {userName}
         </p>
 
+        {/* GRID OF CARDS */}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px' }}>
           {visibleItems.map((item, index) => (
             <Link href={item.href} key={index} style={{ textDecoration: 'none' }}>
@@ -79,8 +81,8 @@ export default async function ControlPanel() {
                   flexDirection: 'column', 
                   alignItems: 'center', 
                   justifyContent: 'center', 
-                  color: 'white',
-                  boxShadow: '0 8px 15px rgba(0,0,0,0.1)',
+                  color: 'white', 
+                  boxShadow: '0 8px 15px rgba(0,0,0,0.1)', 
                   cursor: 'pointer'
                 }}
               >
@@ -92,6 +94,9 @@ export default async function ControlPanel() {
             </Link>
           ))}
         </div>
+
+        <LogoutButton />
+
       </div>
     </div>
   );

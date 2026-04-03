@@ -3,17 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useState } from 'react'; // 👈 Added for mobile menu state
 
 const allNavItems = [
-  // 🟢 FIXED: Changed href to '/dashboard' to match your folder name
   { name: 'Dashboard', href: '/dashboard', icon: '📦', roles: ['SUPERADMIN', 'ADMIN'] },
-  
-  // 🟢 Student Manager
   { name: 'Student Manager', href: '/student-manager', icon: '👥', roles: ['SUPERADMIN', 'ADMIN'] },
-  
-  // 🔴 REMOVED: Stock Management was here
-  
-  // 🟢 Scan Tools (Visible to everyone)
   { name: 'Scan & Approve', href: '/scan-approve', icon: '📷', roles: ['SUPERADMIN', 'ADMIN', 'BRANCH'] },
   { name: 'Scan Log', href: '/scan-log', icon: '📋', roles: ['SUPERADMIN', 'ADMIN', 'BRANCH'] },
 ];
@@ -26,11 +20,14 @@ export default function Sidebar() {
   const userRole = (session?.user as any)?.role || 'BRANCH';
   const userName = session?.user?.name || session?.user?.email?.split('@')[0] || 'User';
 
+  // 👈 Mobile Menu State
+  const [isOpen, setIsOpen] = useState(false);
+
   const visibleItems = allNavItems.filter(item => 
     item.roles.includes(userRole)
   );
 
-  // 🛑 HIDE LOGIC: Sidebar only shows inside actual tool pages
+  // 🛑 HIDE LOGIC
   const shouldHide = 
     pathname === '/' || 
     lowerPath === '/login' || 
@@ -40,11 +37,46 @@ export default function Sidebar() {
   if (shouldHide) return null;
 
   return (
-    <aside className="w-64 h-screen fixed left-0 top-0 bg-[#7cb342] text-white shadow-2xl z-[100] print:hidden">
-      <div className="flex flex-col h-full">
+    <>
+      {/* 📱 1. MOBILE TOP BAR (Hidden on Desktops) */}
+      <div className="lg:hidden fixed top-0 left-0 w-full bg-[#7cb342] text-white p-4 flex justify-between items-center z-[90] shadow-md print:hidden">
+        <h1 className="text-xl font-black tracking-tighter uppercase leading-none">
+          My Inventory
+        </h1>
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="p-2 bg-black/10 rounded-lg hover:bg-black/20 transition-colors"
+        >
+          {/* Hamburger / Close Icon */}
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {isOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* 🌑 2. MOBILE OVERLAY (Darkens background when menu is open) */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[95] lg:hidden" 
+          onClick={() => setIsOpen(false)} 
+        />
+      )}
+
+      {/* 💻 3. THE SIDEBAR ITSELF */}
+      <aside className={`
+        fixed left-0 top-0 h-screen w-64 bg-[#7cb342] text-white shadow-2xl z-[100] print:hidden
+        flex flex-col transform transition-transform duration-300 ease-in-out
+        lg:translate-x-0 
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
         
         {/* BRANDING */}
-        <div className="p-8">
+        <div className="p-8 hidden lg:block">
+          {/* Hidden on mobile because it's already in the top bar */}
           <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">
             My Inventory
           </h1>
@@ -53,10 +85,18 @@ export default function Sidebar() {
           </p>
         </div>
 
+        {/* MOBILE BRANDING (Slightly different padding for mobile sliding menu) */}
+        <div className="p-6 lg:hidden border-b border-white/10 mb-2">
+           <p className="text-[10px] font-bold opacity-70 tracking-[0.2em] uppercase">
+            {userRole === 'BRANCH' ? 'BRANCH TERMINAL' : 'CENTRAL ADMINISTRATION'}
+          </p>
+        </div>
+
         {/* EXIT TO CONTROL PANEL */}
         <div className="px-4 mb-4">
           <Link 
             href="/" 
+            onClick={() => setIsOpen(false)} // 👈 Closes menu when clicked
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all group no-underline text-white"
           >
             <span className="text-lg group-hover:-translate-x-1 transition-transform">⬅️</span>
@@ -67,13 +107,13 @@ export default function Sidebar() {
         {/* NAVIGATION */}
         <nav className="flex-1 py-4 space-y-2">
           {visibleItems.map((item) => {
-            // Check if active based on new /dashboard path
             const isActive = lowerPath.startsWith(item.href.toLowerCase());
             
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setIsOpen(false)} // 👈 Closes menu when clicked
                 className={`flex items-center gap-4 px-6 py-4 transition-all duration-300 relative group no-underline ${
                   isActive
                     ? 'bg-[#f8fafc] text-[#7cb342] font-bold rounded-l-full ml-4 shadow-[-10px_0_15px_rgba(0,0,0,0.1)]'
@@ -110,7 +150,7 @@ export default function Sidebar() {
             </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
