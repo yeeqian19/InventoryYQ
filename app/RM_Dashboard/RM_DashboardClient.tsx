@@ -3,7 +3,44 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowLeft, Calendar, ChevronDown, Search, Users, RotateCcw, UserSearch, Package, Gift, Layers } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronDown, Search, Users, UserSearch, Package, Gift, Layers, Globe } from 'lucide-react';
+
+// --- NEW MASTER BRANCH CONFIGURATION ---
+type Region = 'A' | 'B' | 'C' | 'HQ';
+type Branch = { code: string; name: string; region: Region };
+
+const BRANCH_LIST: Branch[] = [
+  // REGION A
+  { code: 'RBY', name: 'Rimbayu', region: 'A' },
+  { code: 'KLG', name: 'Klang', region: 'A' },
+  { code: 'SHA', name: 'Shah Alam', region: 'A' },
+  { code: 'SA',  name: 'Setia Alam', region: 'A' },
+  { code: 'DA',  name: 'Denai Alam', region: 'A' },
+  { code: 'EGR', name: 'Eco Grandeur', region: 'A' },
+  { code: 'ST',  name: 'Subang Taipan', region: 'A' },
+  { code: 'AC',  name: 'Anggun City Rawang', region: 'A' },
+  { code: 'SBY', name: 'Sungai Buloh', region: 'A' },
+  // REGION B
+  { code: 'SLY',  name: 'Selayang', region: 'B' },
+  { code: 'DK',   name: 'Danau Kota', region: 'B' },
+  { code: 'KD',   name: 'Kota Damansara', region: 'B' },
+  { code: 'AMP',  name: 'Ampang', region: 'B' },
+  { code: 'SP',   name: 'Sri Petaling', region: 'B' },
+  { code: 'BTHO', name: 'Bandar Tun Hussein Onn', region: 'B' },
+  { code: 'KTG',  name: 'Kajang TTDI Groove', region: 'B' },
+  { code: 'DSH',  name: 'Desa Sri Hartamas', region: 'B' },
+  { code: 'TSG',  name: 'Taman Sri Gombak', region: 'B' },
+  // REGION C
+  { code: 'PJY', name: 'Putrajaya', region: 'C' },
+  { code: 'KW',  name: 'Kota Warisan', region: 'C' },
+  { code: 'BBB', name: 'Bandar Baru Bangi', region: 'C' },
+  { code: 'CJY', name: 'Cyberjaya', region: 'C' },
+  { code: 'BSP', name: 'Bandar Seri Putra', region: 'C' },
+  { code: 'SNT', name: 'Senawang Taipan', region: 'C' },
+  { code: 'SBN', name: 'Seremban', region: 'C' },
+  { code: 'DP',  name: 'Dataran Puchong Utama', region: 'C' },
+  { code: 'ONL', name: 'Online / Others', region: 'C' },
+];
 
 type StudentData = {
   student_id: string;
@@ -21,13 +58,10 @@ type StudentData = {
   created_at?: string;
 };
 
-// Moved constants outside the component to prevent unnecessary re-renders and dependency warnings
-const R2 = ['ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 'HQ'];
-const R3 = ['ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'TSG', 'KW'];
-
 export default function RM_DashboardClient({ initialData }: { initialData: StudentData[] }) {
   const router = useRouter();
-  const [activeRegion, setActiveRegion] = useState<'ALL' | 'R2' | 'R3'>('ALL');
+  // Changed state from R2/R3 to A/B/C/ALL
+  const [activeRegion, setActiveRegion] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [activeType, setActiveType] = useState<'ALL' | 'NEW' | 'RENEWAL' | 'TRIAL'>('NEW'); 
   const [itemToggle, setItemToggle] = useState<'ALL' | 'SK' | 'EG'>('ALL');
   const [expandedBranch, setExpandedBranch] = useState<string | null>(null);
@@ -57,9 +91,16 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
         end = new Date();
         break;
       case 'last-week':
-        const prevDay = now.getDay();
-        start.setDate(now.getDate() - prevDay - 7);
-        end.setDate(now.getDate() - prevDay - 1);
+        const currentDay = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+        const daysToCurrentMonday = currentDay === 0 ? 6 : currentDay - 1;
+        const currentMonday = new Date(now);
+        currentMonday.setDate(now.getDate() - daysToCurrentMonday);
+        const lastMonday = new Date(currentMonday);
+        lastMonday.setDate(currentMonday.getDate() - 7);
+        const lastSunday = new Date(lastMonday);
+        lastSunday.setDate(lastMonday.getDate() + 6);
+        start = lastMonday;
+        end = lastSunday;
         break;
       case 'this-month':
         start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -69,6 +110,10 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
         start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         end = new Date(now.getFullYear(), now.getMonth(), 0);
         break;
+      case 'all':
+        setFromDate('');
+        setToDate('');
+        return;
       default:
         return;
     }
@@ -80,16 +125,6 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
     calculateDates('this-month');
   }, []);
 
-  const handleReset = () => {
-    setBranchSearch('');
-    setStudentSearch('');
-    setActiveRegion('ALL');
-    setActiveType('NEW');
-    setItemToggle('ALL');
-    setRangeSelect('this-month');
-    calculateDates('this-month');
-  };
-
   const branchStats = useMemo(() => {
     let filtered = [...initialData];
 
@@ -97,9 +132,11 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
       filtered = filtered.filter(s => s.type?.toUpperCase() === activeType.toUpperCase());
     }
     
-    // We still filter the students based on region, but we will no longer use this to dictate which rows show up
-    if (activeRegion === 'R2') filtered = filtered.filter(s => R2.includes(s.branch));
-    if (activeRegion === 'R3') filtered = filtered.filter(s => R3.includes(s.branch));
+    // Filter by Region
+    if (activeRegion !== 'ALL') {
+      const regionCodes = BRANCH_LIST.filter(b => b.region === activeRegion).map(b => b.code);
+      filtered = filtered.filter(s => regionCodes.includes(s.branch));
+    }
 
     if (fromDate || toDate) {
       const dStart = fromDate ? new Date(fromDate) : null;
@@ -116,31 +153,26 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
       filtered = filtered.filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
     }
 
-    // ALWAYS show branches based on the selected Region toggle, regardless of student count
-    let allBranchNames: string[] = [];
-    if (activeRegion === 'R2') allBranchNames = R2;
-    else if (activeRegion === 'R3') allBranchNames = R3;
-    else allBranchNames = [...R2, ...R3]; // ALL regions
+    // Always show branches based on the Region selection from the Master List
+    const masterRegionList = activeRegion === 'ALL' 
+      ? BRANCH_LIST 
+      : BRANCH_LIST.filter(b => b.region === activeRegion);
 
-    // Apply the branch search filter and sort them alphabetically
-    const finalNames = allBranchNames
-      .filter(n => n.toLowerCase().includes(branchSearch.toLowerCase()))
-      .sort();
+    const finalBranches = masterRegionList
+      .filter(b => b.code.toLowerCase().includes(branchSearch.toLowerCase()) || b.name.toLowerCase().includes(branchSearch.toLowerCase()))
+      .sort((a, b) => a.code.localeCompare(b.code));
 
-    return finalNames.map(name => {
-      const students = filtered.filter(s => s.branch === name);
+    return finalBranches.map(branch => {
+      const students = filtered.filter(s => s.branch === branch.code);
       let bTarget = 0; let bPrep = 0; let bPickup = 0; let bReceived = 0;
 
       students.forEach(s => {
-        // Only count SK targets if the student is eligible for an SK
         if (s.hasSK && (itemToggle === 'ALL' || itemToggle === 'SK')) {
           bTarget += 1;
           if (s.sk_prep) bPrep += 1;
           if (s.bm_pickup) bPickup += 1;
           if (s.student_received) bReceived += 1;
         }
-
-        // Only count EG targets if the student is eligible for an EG
         if (s.hasEG && (itemToggle === 'ALL' || itemToggle === 'EG')) {
           bTarget += 1;
           if (s.eg_prep) bPrep += 1;
@@ -149,15 +181,21 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
         }
       });
 
-      // Filter the UI list to only show students who actually have targets for the selected toggle
       const displayedList = students.filter(s => {
         if (itemToggle === 'SK') return s.hasSK;
         if (itemToggle === 'EG') return s.hasEG;
-        if (itemToggle === 'ALL') return s.hasSK || s.hasEG; // Exclude those with 0 items to pack
-        return true; 
+        return s.hasSK || s.hasEG;
       });
 
-      return { name, total: bTarget, prep: bPrep, pickup: bPickup, received: bReceived, list: displayedList };
+      return { 
+        name: branch.code, 
+        fullName: branch.name, 
+        total: bTarget, 
+        prep: bPrep, 
+        pickup: bPickup, 
+        received: bReceived, 
+        list: displayedList 
+      };
     });
   }, [initialData, activeRegion, activeType, itemToggle, fromDate, toDate, branchSearch, studentSearch]);
 
@@ -178,101 +216,107 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
               <span className="text-[10px] font-black uppercase tracking-widest">Control Panel</span>
             </button>
 
-            <div className="flex flex-wrap items-center gap-8">
-              <div>
-                <h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">RM Dashboard</h1>
-                <p className="text-slate-400 font-bold tracking-[0.4em] text-[10px] mt-4 uppercase opacity-70">Strict Package 9 & 12 Logic Sync</p>
-              </div>
-              
-              <div className="bg-slate-900 text-white p-5 rounded-[2rem] flex items-center gap-5 px-8 shadow-2xl border-b-8 border-emerald-500 min-w-[240px]">
-                 <div className="bg-emerald-500/20 p-3 rounded-2xl"><Users size={28} className="text-emerald-400" /></div>
-                 <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-40">{itemToggle} Target Units</p>
-                    <p className="text-5xl font-black italic leading-none">{totalUnits}</p>
-                 </div>
-              </div>
+            <div>
+              <h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter text-slate-900 leading-none">RM Dashboard</h1>
+              <p className="text-slate-400 font-bold tracking-[0.4em] text-[10px] mt-4 uppercase opacity-70">Region A, B, & C Logic Sync</p>
             </div>
           </div>
 
           <div className="flex flex-col items-end gap-5 w-full lg:w-auto">
-             <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 shadow-lg">
-                {[
-                  {id: 'ALL', icon: <Layers size={14}/>, label: 'ALL'},
-                  {id: 'SK', icon: <Package size={14}/>, label: 'SK ONLY'},
-                  {id: 'EG', icon: <Gift size={14}/>, label: 'EG ONLY'}
-                ].map(item => (
-                  <button 
-                    key={item.id}
-                    onClick={() => setItemToggle(item.id as any)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all ${itemToggle === item.id ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                  >
-                    {item.icon} <span className="hidden sm:inline">{item.label}</span>
-                  </button>
-                ))}
-             </div>
+            {/* ITEM TOGGLE */}
+            <div className="flex bg-slate-900 p-1 rounded-2xl border border-slate-800 shadow-lg">
+              {[
+                {id: 'ALL', icon: <Layers size={14}/>, label: 'ALL'},
+                {id: 'SK', icon: <Package size={14}/>, label: 'SK ONLY'},
+                {id: 'EG', icon: <Gift size={14}/>, label: 'EG ONLY'}
+              ].map(item => (
+                <button 
+                  key={item.id}
+                  onClick={() => setItemToggle(item.id as any)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all ${itemToggle === item.id ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                >
+                  {item.icon} <span className="hidden sm:inline">{item.label}</span>
+                </button>
+              ))}
+            </div>
 
             <div className="flex flex-wrap justify-end items-center gap-3">
-              {/* DATE RANGE SYNC GROUP */}
+              {/* DATE RANGE */}
               <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="relative flex items-center gap-2 px-3 border-r border-slate-100">
-                  <select 
-                    value={rangeSelect} 
-                    onChange={(e) => { setRangeSelect(e.target.value); calculateDates(e.target.value); }} 
-                    className="appearance-none bg-transparent text-[10px] font-black uppercase outline-none pr-6 cursor-pointer"
-                  >
-                    <option value="this-month">This Month</option>
-                    <option value="last-month">Last Month</option>
-                    <option value="this-week">This Week</option>
-                    <option value="last-week">Last Week</option>
-                    <option value="custom">Custom Range</option>
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 pointer-events-none text-slate-300" />
-                </div>
-                
-                <div className="flex items-center gap-3 px-2">
-                  <Calendar size={14} className="text-blue-500" />
-                  <input 
-                    type="date" 
-                    value={fromDate} 
-                    onChange={(e) => { setFromDate(e.target.value); setRangeSelect('custom'); }} 
-                    className="text-[10px] font-bold outline-none bg-transparent"
-                  />
+                <select 
+                  value={rangeSelect} 
+                  onChange={(e) => { setRangeSelect(e.target.value); calculateDates(e.target.value); }} 
+                  className="bg-transparent text-[10px] font-black uppercase outline-none px-2 cursor-pointer"
+                >
+                  <option value="this-month">This Month</option>
+                  <option value="last-month">Last Month</option>
+                  <option value="this-week">This Week</option>
+                  <option value="last-week">Last Week</option>
+                  <option value="all">All Time</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <div className="flex items-center gap-2 px-2 border-l border-slate-100">
+                  <input type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setRangeSelect('custom'); }} className="text-[10px] font-bold outline-none bg-transparent" />
                   <span className="text-slate-300 font-black text-[9px]">TO</span>
-                  <input 
-                    type="date" 
-                    value={toDate} 
-                    onChange={(e) => { setToDate(e.target.value); setRangeSelect('custom'); }} 
-                    className="text-[10px] font-bold outline-none bg-transparent"
-                  />
+                  <input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setRangeSelect('custom'); }} className="text-[10px] font-bold outline-none bg-transparent" />
                 </div>
               </div>
 
-              <div className="flex bg-slate-200 rounded-xl p-1 shadow-inner">
+              {/* TYPE FILTER */}
+              <div className="flex bg-slate-200 rounded-xl p-1">
                 {['ALL', 'NEW', 'RENEWAL', 'TRIAL'].map(t => (
                   <button key={t} onClick={() => setActiveType(t as any)} className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all ${activeType === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>{t}</button>
                 ))}
               </div>
-              <div className="flex bg-slate-200 rounded-xl p-1 shadow-inner">
-                {['ALL', 'R2', 'R3'].map(r => (
-                  <button key={r} onClick={() => setActiveRegion(r as any)} className={`px-5 py-2 rounded-lg text-[10px] font-black transition-all ${activeRegion === r ? 'bg-white text-slate-900 shadow-md scale-105' : 'text-slate-400'}`}>{r}</button>
+
+              {/* REGION TOGGLE - UPDATED */}
+              <div className="flex bg-slate-900 p-1 rounded-xl shadow-lg">
+                {[
+                  {id: 'ALL', icon: <Globe size={12}/>},
+                  {id: 'A', icon: null},
+                  {id: 'B', icon: null},
+                  {id: 'C', icon: null}
+                ].map(r => (
+                  <button 
+                    key={r.id} 
+                    onClick={() => setActiveRegion(r.id as any)} 
+                    className={`px-5 py-2 rounded-lg text-[10px] font-black transition-all flex items-center gap-2 ${activeRegion === r.id ? 'bg-emerald-500 text-white shadow-md scale-105' : 'text-slate-500 hover:text-white'}`}
+                  >
+                    {r.icon} {r.id === 'ALL' ? 'ALL' : `REG ${r.id}`}
+                  </button>
                 ))}
               </div>
             </div>
           </div>
         </div>
 
+        {/* STATS CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+           {[
+             { label: 'Total Units', val: totalUnits, color: 'slate' },
+             { label: 'Prepared', val: totalPrep, color: 'emerald' },
+             { label: 'BM Pickup', val: totalPickup, color: 'blue' },
+             { label: 'Received', val: totalReceived, color: 'purple' },
+           ].map(card => (
+             <div key={card.label} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{card.label}</p>
+                <p className={`text-5xl font-black italic text-${card.color}-600 tracking-tighter`}>{card.val}</p>
+             </div>
+           ))}
+        </div>
+
         {/* CHART */}
-        <div className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-xl border border-white mb-10 h-96 transition-all">
+        <div className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-xl border border-white mb-10 h-96">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={[
                 { label: 'Prep', done: totalPrep, remaining: Math.max(0, totalUnits - totalPrep) },
-                { label: 'BM Pickup', done: totalPickup, remaining: Math.max(0, totalUnits - totalPickup) },
-                { label: 'Received', done: totalReceived, remaining: Math.max(0, totalUnits - totalReceived) },
+                { label: 'Pickup', done: totalPickup, remaining: Math.max(0, totalUnits - totalPickup) },
+                { label: 'Final', done: totalReceived, remaining: Math.max(0, totalUnits - totalReceived) },
             ]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="8 8" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontWeight: 900, fontSize: 13}} dy={15} />
               <YAxis hide domain={[0, totalUnits]} />
-              <Tooltip cursor={{fill: '#f8fafc', radius: 20}} separator="" formatter={(v, n) => [v, n === 'done' ? 'Completed' : 'Remaining']} contentStyle={{borderRadius: '24px', border: 'none', fontWeight: '900'}} />
+              <Tooltip cursor={{fill: '#f8fafc', radius: 20}} contentStyle={{borderRadius: '24px', border: 'none', fontWeight: '900'}} />
               <Bar dataKey="done" stackId="a" fill="#10b981" barSize={85} />
               <Bar dataKey="remaining" stackId="a" fill="#fb7185" radius={[18, 18, 0, 0]} barSize={85} opacity={0.8} />
             </BarChart>
@@ -283,11 +327,11 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-            <input type="text" placeholder="Filter by Branch Name..." value={branchSearch} onChange={(e) => setBranchSearch(e.target.value)} className="w-full bg-white border-2 border-slate-100 rounded-[2rem] py-5 pl-14 pr-6 outline-none focus:border-slate-900 shadow-sm transition-all font-bold text-sm" />
+            <input type="text" placeholder="Search Branch..." value={branchSearch} onChange={(e) => setBranchSearch(e.target.value)} className="w-full bg-white border-2 border-slate-100 rounded-[2rem] py-5 pl-14 pr-6 outline-none focus:border-emerald-500 shadow-sm transition-all font-bold text-sm" />
           </div>
           <div className="relative flex-1">
             <UserSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-            <input type="text" placeholder="Find Student Across Regions..." value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} className="w-full bg-white border-2 border-slate-100 rounded-[2rem] py-5 pl-14 pr-6 outline-none focus:border-blue-600 shadow-sm transition-all font-bold text-sm" />
+            <input type="text" placeholder="Find Student..." value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} className="w-full bg-white border-2 border-slate-100 rounded-[2rem] py-5 pl-14 pr-6 outline-none focus:border-blue-600 shadow-sm transition-all font-bold text-sm" />
           </div>
         </div>
 
@@ -298,17 +342,22 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
               <thead>
                 <tr className="bg-slate-50/50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
                   <th className="px-10 py-7">Branch</th>
-                  <th className="px-8 py-7 text-slate-900">Units Target</th>
-                  <th className="px-8 py-7 text-emerald-600">Prepared</th>
-                  <th className="px-8 py-7 text-blue-600">Pickup Units</th>
-                  <th className="px-8 py-7 text-purple-600">Final Received</th>
+                  <th className="px-8 py-7 text-slate-900">Target</th>
+                  <th className="px-8 py-7 text-emerald-600">Prep</th>
+                  <th className="px-8 py-7 text-blue-600">Pickup</th>
+                  <th className="px-8 py-7 text-purple-600">Received</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {branchStats.map((row) => (
                   <React.Fragment key={row.name}>
-                    <tr onClick={() => setExpandedBranch(expandedBranch === row.name ? null : row.name)} className="hover:bg-blue-50/40 cursor-pointer transition-all">
-                      <td className="px-10 py-8 font-black text-2xl tracking-tighter text-slate-900 italic">{row.name}</td>
+                    <tr onClick={() => setExpandedBranch(expandedBranch === row.name ? null : row.name)} className="hover:bg-emerald-50/40 cursor-pointer transition-all">
+                      <td className="px-10 py-8">
+                        <div className="flex flex-col">
+                          <span className="font-black text-2xl tracking-tighter text-slate-900 italic uppercase">{row.name}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{row.fullName}</span>
+                        </div>
+                      </td>
                       <td className="px-8 py-8 font-black text-lg text-slate-300 italic">{row.total}</td>
                       <td className="px-8 py-8 font-black text-emerald-600">{row.prep} / {row.total}</td>
                       <td className="px-8 py-8 font-black text-blue-600 text-sm">{row.pickup} / {row.total}</td>
@@ -320,53 +369,16 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             {row.list.length > 0 ? (
                                row.list.map(s => {
-                                // Determine strict item status visualization
-                                let isPrepared = false;
-                                if (itemToggle === 'EG') isPrepared = s.eg_prep;
-                                else if (itemToggle === 'SK') isPrepared = s.sk_prep;
-                                else if (itemToggle === 'ALL') {
-                                  const skDone = s.hasSK ? s.sk_prep : true;
-                                  const egDone = s.hasEG ? s.eg_prep : true;
-                                  isPrepared = skDone && egDone;
-                                }
-
-                                // Create smart sub-labels indicating exactly what they get
-                                let itemText = '';
-                                if (itemToggle === 'EG') itemText = `EG Only (${s.giftType})`;
-                                else if (itemToggle === 'SK') itemText = 'Starter Kit Only';
-                                else {
-                                  if (s.hasSK && s.hasEG) itemText = `2 Items (SK + ${s.giftType})`;
-                                  else if (s.hasSK) itemText = '1 Item (SK)';
-                                  else if (s.hasEG) itemText = `1 Item (${s.giftType})`;
-                                }
-
-                                return (
-                                  <div 
-                                    key={s.student_id} 
-                                    className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-2 hover:shadow-md transition-all border-l-8"
-                                    style={{ borderLeftColor: isPrepared ? '#10b981' : '#fb7185' }}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${s.student_received ? 'bg-purple-500' : s.bm_pickup ? 'bg-emerald-500' : isPrepared ? 'bg-blue-500' : 'bg-rose-300'}`} />
-                                      <span className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tighter">
-                                        {s.name}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-col pl-6">
-                                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">
-                                        {itemText}
-                                      </span>
-                                      <span className="text-[8px] font-bold text-blue-500 uppercase mt-1">
-                                        {s.package === "NONE" || !s.package ? "NO PACKAGE" : `PKG: ${s.package}`}
-                                      </span>
-                                    </div>
+                                 let isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
+                                 return (
+                                  <div key={s.student_id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-2 border-l-8" style={{ borderLeftColor: isPrepared ? '#10b981' : '#fb7185' }}>
+                                    <span className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tighter">{s.name}</span>
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">{s.package}</span>
                                   </div>
-                                );
-                              })
+                                 );
+                               })
                             ) : (
-                                <div className="col-span-full py-6 text-center text-slate-400 font-bold text-sm italic">
-                                  No targeted students found for this branch based on current filters.
-                                </div>
+                              <div className="col-span-full py-6 text-center text-slate-400 font-bold text-sm italic">No data.</div>
                             )}
                           </div>
                         </td>

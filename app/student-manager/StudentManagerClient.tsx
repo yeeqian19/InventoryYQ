@@ -4,6 +4,17 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
 
+// --- NEW MASTER BRANCH CONFIGURATION ---
+const BRANCH_MASTER_LIST = [
+  // Region A
+  "AC", "DA", "EGR", "KLG", "RBY", "SA", "SBY", "SHA", "ST",
+  // Region B
+  "AMP", "BTHO", "DK", "DSH", "KD", "KTG", "SLY", "SP", "TSG",
+  // Region C
+  "BBB", "BSP", "CJY", "DP", "KW", "ONL", "PJY", "SBN", "SNT",
+  "HQ"
+];
+
 type Student = {
   student_id: string; 
   name: string;
@@ -39,7 +50,8 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const day = today.getDay();
     const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(new Date().setDate(diff));
+    const monday = new Date(today);
+    monday.setDate(diff);
     return { monday: formatDateForInput(monday), today: formatDateForInput(new Date()) };
   };
 
@@ -59,34 +71,50 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
   };
 
   const BRANCHES = useMemo(() => {
-    const expectedBranches = ['ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 'ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'KW', 'TSG']; 
-    return ['All Branches', ...expectedBranches.sort()];
+    return ['All Branches', ...BRANCH_MASTER_LIST.sort()];
   }, []);
 
   useEffect(() => { setHasMounted(true); }, []);
 
-  // --- HANDLERS ---
+  // --- UPDATED DATE HANDLERS ---
   const handleDropdownChange = (val: string) => {
     setQuickDate(val);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     switch (val) {
-      case 'thisWeek': setStartDate(weekRange.monday); setEndDate(weekRange.today); break;
+      case 'thisWeek': 
+        setStartDate(weekRange.monday); 
+        setEndDate(weekRange.today); 
+        break;
       case 'lastWeek': {
-        const end = new Date(today); end.setDate(today.getDate() - today.getDay());
-        const start = new Date(end); start.setDate(end.getDate() - 6);
-        setStartDate(formatDateForInput(start)); setEndDate(formatDateForInput(end));
+        const currentDay = today.getDay();
+        const daysToCurrentMonday = currentDay === 0 ? 6 : currentDay - 1;
+        const currentMonday = new Date(today);
+        currentMonday.setDate(today.getDate() - daysToCurrentMonday);
+        const lastMonday = new Date(currentMonday);
+        lastMonday.setDate(currentMonday.getDate() - 7);
+        const lastSunday = new Date(lastMonday);
+        lastSunday.setDate(lastMonday.getDate() + 6);
+        setStartDate(formatDateForInput(lastMonday)); 
+        setEndDate(formatDateForInput(lastSunday));
         break;
       }
-      case 'thisMonth': setStartDate(formatDateForInput(new Date(today.getFullYear(), today.getMonth(), 1))); setEndDate(formatDateForInput(new Date())); break;
+      case 'thisMonth': 
+        setStartDate(formatDateForInput(new Date(today.getFullYear(), today.getMonth(), 1))); 
+        setEndDate(formatDateForInput(new Date())); 
+        break;
       case 'lastMonth': {
         const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-        setStartDate(formatDateForInput(firstDayLastMonth)); setEndDate(formatDateForInput(lastDayLastMonth));
+        setStartDate(formatDateForInput(firstDayLastMonth)); 
+        setEndDate(formatDateForInput(lastDayLastMonth));
         break;
       }
-      case 'all': setStartDate(''); setEndDate(''); break;
+      case 'all': 
+        setStartDate(''); 
+        setEndDate(''); 
+        break;
     }
   };
 
@@ -108,11 +136,19 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
 
   const filteredStudents = useMemo(() => {
     let data = processedInitialData; 
-    data = data.filter(s => { const code = activeSystem === 'SK' ? s.skBarcode : s.egBarcode; return code && code !== 'N/A' && code.trim() !== ''; });
+    data = data.filter(s => { 
+      const code = activeSystem === 'SK' ? s.skBarcode : s.egBarcode; 
+      return code && code !== 'N/A' && code.trim() !== ''; 
+    });
     if (searchTerm) data = data.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
     if (activeFilter.branch !== 'all') data = data.filter(s => s.branch === activeFilter.branch);
     if (activeFilter.type !== 'All') data = data.filter(s => s.studentType === activeFilter.type);
-    if (activeFilter.start && activeFilter.end) data = data.filter(s => s.date >= activeFilter.start && s.date <= activeFilter.end);
+    
+    // Updated date filter to handle "All Time" (empty strings)
+    if (activeFilter.start && activeFilter.end) {
+      data = data.filter(s => s.date >= activeFilter.start && s.date <= activeFilter.end);
+    }
+    
     return data;
   }, [activeFilter, processedInitialData, searchTerm, activeSystem]);
 
@@ -137,56 +173,19 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
   return (
     <div className="p-8 font-sans text-slate-800">
       
-      {/* --- CSS FOR PERFECT A4 PRINT ALIGNMENT --- */}
       <style jsx global>{`
         @media print {
-          @page { 
-            size: A4 portrait; 
-            margin: 10mm; /* Strict browser margin */
-          }
-          body { 
-            background: white !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
+          @page { size: A4 portrait; margin: 10mm; }
+          body { background: white !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
-          
-          .print-label-container { 
-            display: grid !important; 
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            
-            /* THE FIX: Lock the exact width to ensure it doesn't push off the page */
-            width: 190mm; /* A4 width (210) minus 10mm margins on both sides */
-            height: 275mm; /* A4 height (297) minus margins */
-            
-            /* THE FIX: Force absolute center */
-            margin: 0 auto; 
-            
-            /* THE FIX: Smaller gap ensures both columns fit safely inside the 190mm width */
-            gap: 10mm; 
-            padding: 0;
-            box-sizing: border-box;
-            
-            justify-items: center; /* Center cards in their columns */
-            align-items: center; /* Center cards in their rows */
-          }
-          
-          .page-break { 
-            display: block;
-            break-after: page; 
-            grid-column: 1 / -1; 
-          }
+          .print-label-container { display: grid !important; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; width: 190mm; height: 275mm; margin: 0 auto; gap: 5mm; padding: 0; box-sizing: border-box; justify-items: center; align-items: center; }
+          .page-break { display: block; break-after: page; grid-column: 1 / -1; }
         }
       `}</style>
 
-      {/* --- DASHBOARD VIEW --- */}
       <div className="no-print">
         <h1 className="text-3xl font-black text-slate-900 mb-8 tracking-tighter uppercase italic">Inventory Student Manager</h1>
 
-        {/* --- FILTERS --- */}
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 mb-8">
           <div className="flex flex-wrap items-end gap-6">
             <div className="flex flex-col gap-2 flex-1 min-w-[200px]">
@@ -232,10 +231,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
             <div className="flex flex-col items-center gap-3 ml-auto w-full lg:w-auto mt-4 lg:mt-0">
               <div className="flex gap-3 w-full">
                 {selectedIds.length > 0 && (
-                  <button 
-                    onClick={handleClearSelection}
-                    className="px-6 py-3 bg-white border border-rose-200 text-rose-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all flex items-center gap-2 shadow-sm"
-                  >
+                  <button onClick={handleClearSelection} className="px-6 py-3 bg-white border border-rose-200 text-rose-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all flex items-center gap-2 shadow-sm">
                     Clear ({selectedIds.length})
                   </button>
                 )}
@@ -251,7 +247,6 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
           </div>
         </div>
 
-        {/* --- DATA TABLE --- */}
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-slate-50/50 border-b border-slate-100">
@@ -274,7 +269,6 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
               {filteredStudents.map((student) => {
                 const currentCode = activeSystem === 'SK' ? student.skBarcode : student.egBarcode;
                 const isSelected = selectedIds.includes(student.student_id);
-
                 return (
                   <tr key={student.student_id} className={`${isSelected ? 'bg-blue-50/20' : ''} hover:bg-slate-50/30 transition-colors`}>
                     <td className="px-6 py-6 text-center"><input type="checkbox" checked={isSelected} onChange={() => toggleStudent(student.student_id)} className="w-4 h-4 rounded" /></td>
@@ -305,57 +299,39 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
         </div>
       </div>
 
-      {/* --- PRINT VIEW (OPTIMIZED FOR EXACT A4 CENTERING) --- */}
       <div className="hidden print-label-container">
         {selectedStudentsForPrint.map((student, index) => {
            const currentCode = activeSystem === 'SK' ? student.skBarcode : student.egBarcode;
-           
-           let fontSize = 'text-5xl';
-           if (student.name.length > 25) fontSize = 'text-2xl';
-           else if (student.name.length > 20) fontSize = 'text-3xl';
-           else if (student.name.length > 15) fontSize = 'text-4xl';
+           let fontSize = 'text-4xl';
+           if (student.name.length > 25) fontSize = 'text-lg';
+           else if (student.name.length > 20) fontSize = 'text-xl';
+           else if (student.name.length > 15) fontSize = 'text-2xl';
+           else if (student.name.length > 10) fontSize = 'text-3xl';
            
            return (
             <React.Fragment key={student.student_id}>
-              {/* THE FIX: Lock the max-width and max-height of the card so it never overflows */}
-              <div className="flex flex-col items-center justify-center w-full h-full max-w-[90mm] max-h-[130mm]">
-                
-                <div className="border-[3px] border-[#0f172a] rounded-[3rem] w-full h-full flex flex-col items-center justify-between py-10 px-6 bg-white shadow-none" style={{ pageBreakInside: 'avoid' }}>
-                  
-                  {/* Top: Barcode Section */}
+              <div className="flex flex-col items-center justify-center w-full h-full max-w-[85mm] max-h-[85mm]">
+                <div className="border-[3px] border-[#0f172a] rounded-[2.5rem] w-full h-full flex flex-col items-center justify-between py-6 px-4 bg-white shadow-none" style={{ pageBreakInside: 'avoid' }}>
                   <div className="flex flex-col items-center justify-start w-full">
-                    <div className="bg-white w-full flex justify-center items-center mb-2">
-                      <Barcode value={getSafeBarcodeValue(currentCode)} width={2} height={60} displayValue={false} margin={0} />
+                    <div className="bg-white w-full flex justify-center items-center mb-1">
+                      <Barcode value={getSafeBarcodeValue(currentCode)} width={1.5} height={45} displayValue={false} margin={0} />
                     </div>
-                    <p className="text-[12px] font-black text-blue-600 uppercase tracking-widest">{activeSystem} BARCODE</p>
-                    <p className="text-[10px] font-black text-slate-800 tracking-wider mt-1">{currentCode}</p>
+                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{activeSystem} BARCODE</p>
+                    <p className="text-[9px] font-black text-slate-800 tracking-wider">{currentCode}</p>
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mt-1">{student.branch} BRANCH</p>
                   </div>
-
-                  {/* Middle: Name Section */}
-                  <div className="flex flex-col items-center justify-center flex-1 w-full px-2 text-center">
-                    <p className="text-[14px] font-black text-blue-600 uppercase tracking-[0.3em] mb-4">
-                      {student.branch} BRANCH
-                    </p>
-                    <h2 className={`${fontSize} font-black text-slate-900 uppercase leading-none tracking-tight break-words line-clamp-3 w-full`}>
-                      {student.name}
-                    </h2>
+                  <div className="flex flex-col items-center justify-center flex-1 w-full px-1 text-center py-2">
+                    <h2 className={`${fontSize} font-black text-slate-900 uppercase leading-tight tracking-tight break-words line-clamp-3 w-full`}>{student.name}</h2>
                   </div>
-
-                  {/* Bottom: QR Section */}
                   <div className="flex flex-col items-center justify-end">
-                    <div className="p-3 bg-white border-[2px] border-slate-100 rounded-2xl mb-3">
-                      <QRCodeSVG value={currentCode || ''} size={110} level="H" />
+                    <div className="p-2 bg-white border-[2px] border-slate-100 rounded-xl mb-1.5">
+                      <QRCodeSVG value={currentCode || ''} size={70} level="H" />
                     </div>
-                    <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest text-center leading-tight">
-                      SCAN TO<br/>HANDOVER
-                    </p>
+                    <p className="text-[8px] font-black text-slate-800 uppercase tracking-widest text-center leading-tight">SCAN TO<br/>HANDOVER</p>
                   </div>
-
                 </div>
               </div>
-              
-              {/* Page break logic: triggers after every 4th item */}
-              {(index + 1) % 4 === 0 && <div className="page-break" />}
+              {(index + 1) % 6 === 0 && <div className="page-break" />}
             </React.Fragment>
            );
         })}

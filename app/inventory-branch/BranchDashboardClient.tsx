@@ -1,9 +1,47 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import PhotoCapturePanel from '@/components/PhotoCapturePanel';
+
+// --- NEW MASTER BRANCH CONFIGURATION ---
+type Region = 'A' | 'B' | 'C' | 'HQ';
+type Branch = { code: string; name: string; region: Region };
+
+const BRANCH_MASTER_LIST: Branch[] = [
+  // Region A
+  { code: 'RBY', name: 'Rimbayu', region: 'A' },
+  { code: 'KLG', name: 'Klang', region: 'A' },
+  { code: 'SHA', name: 'Shah Alam', region: 'A' },
+  { code: 'SA',  name: 'Setia Alam', region: 'A' },
+  { code: 'DA',  name: 'Denai Alam', region: 'A' },
+  { code: 'EGR', name: 'Eco Grandeur', region: 'A' },
+  { code: 'ST',  name: 'Subang Taipan', region: 'A' },
+  { code: 'AC',  name: 'Anggun City Rawang', region: 'A' },
+  { code: 'SBY', name: 'Sungai Buloh', region: 'A' },
+  // Region B
+  { code: 'SLY',  name: 'Selayang', region: 'B' },
+  { code: 'DK',   name: 'Danau Kota', region: 'B' },
+  { code: 'KD',   name: 'Kota Damansara', region: 'B' },
+  { code: 'AMP',  name: 'Ampang', region: 'B' },
+  { code: 'SP',   name: 'Sri Petaling', region: 'B' },
+  { code: 'BTHO', name: 'Bandar Tun Hussein Onn', region: 'B' },
+  { code: 'KTG',  name: 'Kajang TTDI Groove', region: 'B' },
+  { code: 'DSH',  name: 'Desa Sri Hartamas', region: 'B' },
+  { code: 'TSG',  name: 'Taman Sri Gombak', region: 'B' },
+  // Region C
+  { code: 'PJY', name: 'Putrajaya', region: 'C' },
+  { code: 'KW',  name: 'Kota Warisan', region: 'C' },
+  { code: 'BBB', name: 'Bandar Baru Bangi', region: 'C' },
+  { code: 'CJY', name: 'Cyberjaya', region: 'C' },
+  { code: 'BSP', name: 'Bandar Seri Putra', region: 'C' },
+  { code: 'SNT', name: 'Senawang Taipan', region: 'C' },
+  { code: 'SBN', name: 'Seremban', region: 'C' },
+  { code: 'DP',  name: 'Dataran Puchong Utama', region: 'C' },
+  { code: 'ONL', name: 'Online / Others', region: 'C' },
+  { code: 'HQ',  name: 'Headquarters', region: 'HQ' }
+];
 
 type InventoryItem = {
   student_id: string;
@@ -17,37 +55,92 @@ type InventoryItem = {
   studentReceived: boolean;
   studentType: string;
   package: string;
+  date?: string;
 };
 
 export default function BranchDashboardClient({ initialData }: { initialData: InventoryItem[] }) {
   const router = useRouter();
-  
-  // Master list of all 21 branches
-  const BRANCHES = useMemo(() => {
-    const expectedBranches = [
-      'ST', 'SA', 'PJY', 'AMP', 'CJY', 
-      'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 
-      'ONL', 'SP', 'KD', 'DA', 'DK', 
-      'BTHO', 'EGR', 'BSP', 'KW', 'TSG', 'HQ'
-    ]; 
-    const rawDbBranches = Array.from(new Set(initialData?.map(d => d.branch) || []));
-    const allUnique = Array.from(new Set([...expectedBranches, ...rawDbBranches]));
-    return allUnique.sort();
-  }, [initialData]);
 
-  const [activeBranch, setActiveBranch] = useState(BRANCHES[0]);
-  const [activeMode, setActiveMode] = useState<'PICKUP' | 'HANDOVER'>('PICKUP');
-  
+  // Sort branches alphabetically for the dropdown
+  const SORTED_BRANCHES = useMemo(() => {
+    return [...BRANCH_MASTER_LIST].sort((a, b) => a.code.localeCompare(b.code));
+  }, []);
+
+  // Use the first sorted branch as default
+  const [activeBranch, setActiveBranch] = useState(SORTED_BRANCHES[0].code);
+  const [activeMode, setActiveMode] = useState<'PICKUP' | 'HANDOVER' | 'HISTORY'>('PICKUP');
+
   // Camera & Scan State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanMessage, setScanMessage] = useState({ text: '', type: '' });
   const [lastScanned, setLastScanned] = useState('');
 
-  // Proof of Handover/Pickup (Photo) State
+  // Proof of Handover/Pickup State
   const [pendingHandoverBarcode, setPendingHandoverBarcode] = useState('');
-  const [pendingPickupBarcode, setPendingPickupBarcode] = useState(''); // 👈 NEW STATE FOR BM PICK UP
+  const [pendingPickupBarcode, setPendingPickupBarcode] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+
+  // Form Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [quickDate, setQuickDate] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Applied Filter State (triggers on button click)
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
+  const [appliedStartDate, setAppliedStartDate] = useState('');
+  const [appliedEndDate, setAppliedEndDate] = useState('');
+
+  // Date Helpers
+  const formatDateForInput = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const handleDropdownChange = (val: string) => {
+    setQuickDate(val);
+    const today = new Date();
+
+    if (val === 'all') {
+      setStartDate('');
+      setEndDate('');
+      return;
+    }
+
+    if (val === 'thisWeek') {
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+      const start = new Date(today);
+      start.setDate(diff);
+      setStartDate(formatDateForInput(start));
+      setEndDate(formatDateForInput(new Date()));
+    } else if (val === 'lastWeek') {
+      const end = new Date();
+      end.setDate(end.getDate() - end.getDay());
+      const start = new Date(end);
+      start.setDate(start.getDate() - 6);
+      setStartDate(formatDateForInput(start));
+      setEndDate(formatDateForInput(end));
+    } else if (val === 'thisMonth') {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      setStartDate(formatDateForInput(start));
+      setEndDate(formatDateForInput(new Date()));
+    } else if (val === 'lastMonth') {
+      const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const end = new Date(today.getFullYear(), today.getMonth(), 0);
+      setStartDate(formatDateForInput(start));
+      setEndDate(formatDateForInput(end));
+    }
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedSearchTerm(searchTerm);
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
+  };
 
   // --- LIVE DATA LOGIC ---
   const branchData = useMemo(() => initialData?.filter(item => item.branch === activeBranch) || [], [initialData, activeBranch]);
@@ -57,63 +150,62 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
   const completed = branchData.filter(item => item.studentReceived).length;
 
   const displayQueue = useMemo(() => {
-    const queue = activeMode === 'PICKUP' 
-      ? branchData.filter(item => ((item.skPrep && item.skBarcode) || (item.egPrep && item.egBarcode)) && !item.bmPickup)
-      : branchData.filter(item => item.bmPickup && !item.studentReceived);
-    
+    let queue: InventoryItem[] = [];
+
+    if (activeMode === 'PICKUP') {
+      queue = branchData.filter(item => ((item.skPrep && item.skBarcode) || (item.egPrep && item.egBarcode)) && !item.bmPickup);
+    } else if (activeMode === 'HANDOVER') {
+      queue = branchData.filter(item => item.bmPickup && !item.studentReceived);
+    } else if (activeMode === 'HISTORY') {
+      queue = branchData.filter(item => item.studentReceived);
+    }
+
+    if (appliedSearchTerm.trim() !== '') {
+      queue = queue.filter(item => item.name.toLowerCase().includes(appliedSearchTerm.toLowerCase()));
+    }
+
+    if (appliedStartDate && appliedEndDate) {
+      queue = queue.filter(item => {
+        if (!item.date) return true;
+        return item.date >= appliedStartDate && item.date <= appliedEndDate;
+      });
+    }
+
     return queue.map(item => ({
       student_id: item.student_id,
       name: item.name,
       pkg: item.package,
       type: item.skBarcode ? 'SK' : 'EG',
     }));
-  }, [branchData, activeMode]);
+  }, [branchData, activeMode, appliedSearchTerm, appliedStartDate, appliedEndDate]);
 
-  // Find student name for the pending handover screen
   const pendingStudentName = useMemo(() => {
-    if (!pendingHandoverBarcode) return '';
-    const student = branchData.find(s => s.skBarcode === pendingHandoverBarcode || s.egBarcode === pendingHandoverBarcode);
+    const currentPending = pendingHandoverBarcode || pendingPickupBarcode;
+    if (!currentPending) return '';
+    const student = branchData.find(s => s.skBarcode === currentPending || s.egBarcode === currentPending);
     return student ? student.name : 'Unknown Student';
-  }, [pendingHandoverBarcode, branchData]);
+  }, [pendingHandoverBarcode, pendingPickupBarcode, branchData]);
 
-  // --- CAMERA SCAN HANDLER ---
   const processScan = async (barcodeText: string) => {
-    if (!barcodeText.trim() || isProcessing) return;
+    if (!barcodeText.trim() || isProcessing || activeMode === 'HISTORY') return;
     setLastScanned(barcodeText);
+    setIsCameraOpen(false);
 
-    if (activeMode === 'HANDOVER') {
-      setIsCameraOpen(false); 
-      setPendingHandoverBarcode(barcodeText); 
-      return;
-    }
-
-    // 👈 FIXED: BM Pick Up now opens the camera panel instead of instant submit!
-    if (activeMode === 'PICKUP') {
-      setIsCameraOpen(false);
-      setPendingPickupBarcode(barcodeText);
-      return;
-    }
+    if (activeMode === 'HANDOVER') setPendingHandoverBarcode(barcodeText);
+    if (activeMode === 'PICKUP') setPendingPickupBarcode(barcodeText);
   };
 
-  // --- SUBMIT BM PICKUP TO DATABASE ---
   const submitPickupToDatabase = async (barcode: string, photoBase64: string | null) => {
     if (!photoBase64) return;
     setIsProcessing(true);
     setScanMessage({ text: '📤 Uploading BM Pick Up photo...', type: 'info' });
-
     try {
-      const response = await fetch('/api/bm-pickup', { // 👈 Points to your new API
+      const response = await fetch('/api/bm-pickup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          base64Data: photoBase64,
-          barcode,
-          branchCode: activeBranch,
-        }),
+        body: JSON.stringify({ base64Data: photoBase64, barcode, branchCode: activeBranch }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         setScanMessage({ text: `✅ BM Pick Up Confirmed!`, type: 'success' });
         setPendingPickupBarcode('');
@@ -130,30 +222,20 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
     }
   };
 
-  // --- SUBMIT HANDOVER TO DATABASE ---
   const submitHandoverToDatabase = async (barcode: string, photoBase64: string | null) => {
     if (!photoBase64) return;
     setIsProcessing(true);
     setScanMessage({ text: '📤 Uploading photo & archiving...', type: 'info' });
-
     try {
       const student = branchData.find(s => s.skBarcode === barcode || s.egBarcode === barcode);
-
       const response = await fetch('/api/handover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          base64Data: photoBase64,
-          barcode,
-          studentName: student?.name || barcode,
-          branchCode: activeBranch,
-        }),
+        body: JSON.stringify({ base64Data: photoBase64, barcode, studentName: student?.name || barcode, branchCode: activeBranch }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        setScanMessage({ text: `✅ Handover Complete & Archived!`, type: 'success' });
+        setScanMessage({ text: `✅ Handover Complete!`, type: 'success' });
         setPendingHandoverBarcode('');
         setCapturedPhoto(null);
         router.refresh();
@@ -167,6 +249,8 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
       setTimeout(() => setScanMessage({ text: '', type: '' }), 3000);
     }
   };
+
+  const modeColor = activeMode === 'PICKUP' ? 'amber' : activeMode === 'HANDOVER' ? 'blue' : 'emerald';
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[#f3f7f9] font-sans text-slate-800 overflow-hidden">
@@ -186,16 +270,19 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
 
         <div className="flex-1 px-6 space-y-2 mt-4">
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-4 ml-2">Scanner Modes</p>
-          <button onClick={() => {setActiveMode('PICKUP'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-wide transition-all ${activeMode === 'PICKUP' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:bg-white/5'}`}>
+          <button onClick={() => {setActiveMode('PICKUP'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-xs font-black uppercase transition-all ${activeMode === 'PICKUP' ? 'bg-amber-500 text-white shadow-lg shadow-amber-900/50' : 'text-slate-400 hover:bg-white/5'}`}>
             <span className="text-xl">🚚</span> 1. BM Pickup
           </button>
-          <button onClick={() => {setActiveMode('HANDOVER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-xs font-black uppercase tracking-wide transition-all ${activeMode === 'HANDOVER' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/50' : 'text-slate-400 hover:bg-white/5'}`}>
-            <span className="text-xl">📸</span> 2. Student Received
+          <button onClick={() => {setActiveMode('HANDOVER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-xs font-black uppercase transition-all ${activeMode === 'HANDOVER' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:bg-white/5'}`}>
+            <span className="text-xl">📸</span> 2. Handover
+          </button>
+          <button onClick={() => {setActiveMode('HISTORY'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-xs font-black uppercase transition-all ${activeMode === 'HISTORY' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/50' : 'text-slate-400 hover:bg-white/5'}`}>
+            <span className="text-xl">✅</span> 3. History
           </button>
         </div>
 
         <div className="p-6 border-t border-white/10 flex items-center gap-4 bg-slate-950/50">
-          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-black shadow-inner">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black shadow-inner bg-${modeColor}-500`}>
             {activeBranch.substring(0,2)}
           </div>
           <div>
@@ -210,198 +297,136 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
 
       {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col h-full overflow-y-auto">
-        
-        {/* MOBILE HEADER */}
-        <div className="lg:hidden bg-slate-900 text-white p-6 flex justify-between items-center shadow-md z-20">
-          <h1 className="text-xl font-black tracking-tighter uppercase">My Inventory</h1>
-          <button onClick={() => router.push('/')} className="text-xs font-bold bg-white/10 px-3 py-1.5 rounded-lg">Back</button>
-        </div>
-
-        {/* HEADER */}
         <div className="px-6 lg:px-10 py-6 flex flex-col lg:flex-row justify-between lg:items-end gap-4 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10">
           <div>
             <h2 className="text-2xl lg:text-3xl font-black text-slate-900 uppercase tracking-tighter">
-              {activeMode === 'PICKUP' ? 'Receiving Terminal' : 'Handover Terminal'}
+              {activeMode === 'PICKUP' ? 'Receiving Terminal' : activeMode === 'HANDOVER' ? 'Handover Terminal' : 'History Terminal'}
             </h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-              {activeMode === 'PICKUP' ? 'Scan items arriving from HQ Lorry' : 'Scan items given to students'}
+               {activeMode === 'PICKUP' ? 'Scan items arriving from HQ Lorry' : activeMode === 'HANDOVER' ? 'Scan items given to students' : 'View history'}
             </p>
           </div>
-          
           <div className="flex flex-col gap-1.5 w-full lg:w-auto">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest lg:text-right">Terminal Location</label>
-            <select value={activeBranch} onChange={(e) => setActiveBranch(e.target.value)} className="bg-white border border-slate-200 rounded-xl px-6 py-2.5 text-sm font-black text-slate-700 outline-none shadow-sm cursor-pointer w-full lg:min-w-[180px]">
-              {BRANCHES.map(b => <option key={b} value={b}>{b} Branch</option>)}
+            <select value={activeBranch} onChange={(e) => setActiveBranch(e.target.value)} className="bg-white border border-slate-200 rounded-xl px-6 py-2.5 text-sm font-black text-slate-700 outline-none shadow-sm cursor-pointer">
+              {SORTED_BRANCHES.map(b => (
+                <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
+              ))}
             </select>
-          </div>
-          
-          {/* MOBILE TOGGLE */}
-          <div className="lg:hidden flex gap-2 mt-2">
-            <button onClick={() => {setActiveMode('PICKUP'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode('');}} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase ${activeMode === 'PICKUP' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>1. Pickup</button>
-            <button onClick={() => {setActiveMode('HANDOVER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode('');}} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase ${activeMode === 'HANDOVER' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}>2. Handover</button>
           </div>
         </div>
 
         <div className="p-6 lg:p-10 flex flex-col lg:flex-row gap-8">
-          
-          {/* LEFT COLUMN: SCANNER & KPIS */}
           <div className="flex-1 flex flex-col gap-6">
-            
-            {/* KPI CARDS */}
             <div className="grid grid-cols-3 gap-2 lg:gap-4">
-              <div className="bg-white p-4 lg:p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden ${activeMode === 'PICKUP' ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-200'}`}>
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400"></div>
-                <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase mb-1 lg:mb-2 tracking-widest line-clamp-1">Expected</p>
+                <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Expected</p>
                 <p className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tighter">{expectedFromHQ}</p>
               </div>
-              <div className="bg-white p-4 lg:p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden ${activeMode === 'HANDOVER' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200'}`}>
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
-                <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase mb-1 lg:mb-2 tracking-widest line-clamp-1">Ready</p>
+                <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Ready</p>
                 <p className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tighter">{readyAtBranch}</p>
               </div>
-              <div className="bg-white p-4 lg:p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+              <div className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden ${activeMode === 'HISTORY' ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-slate-200'}`}>
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
-                <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase mb-1 lg:mb-2 tracking-widest line-clamp-1">Done</p>
+                <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Done</p>
                 <p className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tighter">{completed}</p>
               </div>
             </div>
 
-            {/* SCANNER UI / PHOTO CAPTURE UI */}
-            <div className={`bg-white rounded-[2rem] border-2 shadow-sm relative overflow-hidden flex flex-col items-center justify-center min-h-[450px] transition-colors duration-500 ${activeMode === 'PICKUP' ? 'border-blue-200' : 'border-emerald-200'}`}>
-              
-              <div className={`absolute top-0 w-full py-2.5 text-center text-[10px] font-black uppercase tracking-[0.3em] text-white z-20 ${activeMode === 'PICKUP' ? 'bg-blue-500' : 'bg-emerald-500'}`}>
-                {activeMode === 'PICKUP' ? 'BM Receiving Mode' : 'Student Handover Mode'}
+            <div className={`bg-white rounded-[2rem] border-2 shadow-sm relative overflow-hidden flex flex-col items-center justify-center min-h-[450px] border-${modeColor}-200`}>
+              <div className={`absolute top-0 w-full py-2.5 text-center text-[10px] font-black uppercase tracking-[0.3em] text-white z-20 bg-${modeColor}-500`}>
+                {activeMode === 'PICKUP' ? 'BM Receiving Mode' : activeMode === 'HANDOVER' ? 'Student Handover Mode' : 'History List Mode'}
               </div>
 
-              {/* SYSTEM MESSAGES */}
               {scanMessage.text && (
-                <div className={`absolute top-14 px-6 py-3 rounded-xl shadow-xl z-30 text-xs font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-4 ${
-                  scanMessage.type === 'error' ? 'bg-rose-500 text-white' : scanMessage.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-white'
-                }`}>
+                <div className={`absolute top-14 px-6 py-3 rounded-xl shadow-xl z-30 text-xs font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-4 ${scanMessage.type === 'error' ? 'bg-rose-500 text-white' : scanMessage.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-white'}`}>
                   {scanMessage.text}
                 </div>
               )}
 
-              {/* --- 1. PHOTO CAPTURE SCREEN (HANDOVER MODE) --- */}
-              {pendingHandoverBarcode ? (
+              {isCameraOpen ? (
+                <div className="w-full h-full absolute inset-0 pt-8 bg-black flex flex-col items-center justify-center z-10">
+                  <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl relative">
+                    <Scanner onScan={(r) => { if (r?.[0]) processScan(r[0].rawValue); }} components={{ finder: false }} />
+                  </div>
+                  <button onClick={() => setIsCameraOpen(false)} className="mt-6 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-black uppercase tracking-widest border border-white/20 backdrop-blur-md">Close QR Scanner</button>
+                </div>
+              ) : pendingHandoverBarcode || pendingPickupBarcode ? (
                 <PhotoCapturePanel
                   title={pendingStudentName}
-                  subtitle={`Barcode: ${pendingHandoverBarcode}`}
+                  subtitle={`Barcode: ${pendingHandoverBarcode || pendingPickupBarcode}`}
                   capturedPhoto={capturedPhoto}
                   isProcessing={isProcessing}
                   onPhotoCapture={setCapturedPhoto}
-                  onSubmit={() => submitHandoverToDatabase(pendingHandoverBarcode, capturedPhoto)}
-                  onCancel={() => { setPendingHandoverBarcode(''); setCapturedPhoto(null); }}
-                  submitLabel="Complete Handover"
-                  accentColor="emerald" // Green for Student
+                  onSubmit={() => activeMode === 'HANDOVER' ? submitHandoverToDatabase(pendingHandoverBarcode, capturedPhoto) : submitPickupToDatabase(pendingPickupBarcode, capturedPhoto)}
+                  onCancel={() => {setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}}
+                  submitLabel={activeMode === 'HANDOVER' ? "Complete Handover" : "Confirm Pick Up"}
+                  accentColor={modeColor}
                 />
-              ) : 
-              
-              /* --- 2. PHOTO CAPTURE SCREEN (BM PICK UP MODE) 👈 NEW --- */
-              pendingPickupBarcode ? (
-                <PhotoCapturePanel
-                  title={`Branch: ${activeBranch}`}
-                  subtitle={`Scanned Item: ${pendingPickupBarcode}`}
-                  capturedPhoto={capturedPhoto}
-                  isProcessing={isProcessing}
-                  onPhotoCapture={setCapturedPhoto}
-                  onSubmit={() => submitPickupToDatabase(pendingPickupBarcode, capturedPhoto)}
-                  onCancel={() => { setPendingPickupBarcode(''); setCapturedPhoto(null); }}
-                  submitLabel="Confirm Pick Up"
-                  accentColor="blue" // Blue for Branch
-                />
-              ) :
-
-              /* --- 3. LIVE CAMERA QR SCANNER SCREEN --- */
-              isCameraOpen ? (
-                <div className="w-full h-full absolute inset-0 pt-8 bg-black flex flex-col items-center justify-center">
-                  <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl relative">
-                    <Scanner 
-                      onScan={(result) => {
-                        if (result && result.length > 0) {
-                          processScan(result[0].rawValue);
-                        }
-                      }} 
-                      components={{ finder: false }}
-                    />
-                    <div className="absolute inset-0 border-[4px] border-white/30 rounded-2xl pointer-events-none"></div>
-                  </div>
-                  <button 
-                    onClick={() => setIsCameraOpen(false)}
-                    className="mt-6 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-black uppercase tracking-widest transition-all z-20 backdrop-blur-md border border-white/20"
-                  >
-                    Close QR Scanner
-                  </button>
-                </div>
               ) : (
-
-                /* --- 4. IDLE SCANNER UI --- */
                 <div className="flex flex-col items-center p-8 text-center mt-6">
-                  <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-inner ${activeMode === 'PICKUP' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
+                  <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 bg-${modeColor}-50 text-${modeColor}-500`}>
+                    <span className="text-4xl">{activeMode === 'HISTORY' ? '📋' : '🔍'}</span>
                   </div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2">Scanner Disabled</h3>
-                  <p className="text-xs text-slate-500 font-medium mb-8 max-w-[250px]">Tap below to open your phone's camera and scan the QR code.</p>
-                  
-                  <button 
-                    onClick={() => setIsCameraOpen(true)}
-                    className={`px-8 py-4 rounded-xl text-sm font-black uppercase tracking-widest text-white shadow-lg transition-transform active:scale-95 ${activeMode === 'PICKUP' ? 'bg-blue-600 shadow-blue-600/30' : 'bg-emerald-500 shadow-emerald-500/30'}`}
-                  >
-                    Open QR Scanner
-                  </button>
-
-                  {lastScanned && (
-                    <p className="mt-8 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                      Last Scanned: <span className="text-slate-700">{lastScanned}</span>
-                    </p>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2">{activeMode === 'HISTORY' ? 'Viewing History' : 'Scanner Disabled'}</h3>
+                  {activeMode !== 'HISTORY' && (
+                    <button onClick={() => setIsCameraOpen(true)} className={`px-8 py-4 rounded-xl text-sm font-black uppercase text-white bg-${modeColor}-500 shadow-lg shadow-${modeColor}-500/30`}>Open QR Scanner</button>
                   )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* RIGHT COLUMN: QUEUE/LIST */}
-          <div className="w-full lg:w-[420px] flex flex-col bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden h-[500px] lg:h-[630px]">
-            <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+          <div className="w-full lg:w-[500px] flex flex-col bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden h-[500px] lg:h-[630px]">
+            <div className="px-6 py-5 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Branch Queue</h3>
-                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Pending Student Actions</p>
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">{activeMode === 'HISTORY' ? 'History Log' : 'Branch Queue'}</h3>
+                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">{activeMode === 'HISTORY' ? 'Completed Handovers' : 'Pending Actions'}</p>
               </div>
-              <span className="bg-slate-200 text-slate-600 px-4 py-1.5 rounded-full text-[10px] font-black">{displayQueue.length} Items</span>
+              <span className={`px-4 py-1.5 rounded-full text-[10px] font-black bg-${modeColor}-100 text-${modeColor}-700`}>{displayQueue.length} Items</span>
+            </div>
+
+            <div className="p-4 border-b border-slate-100 bg-white flex flex-col gap-3">
+              <input type="text" placeholder="Search student..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-xs font-bold outline-none focus:border-blue-500 transition-colors" />
+              <div className="flex gap-2">
+                <select value={quickDate} onChange={(e) => handleDropdownChange(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-[10px] font-black text-slate-600 outline-none w-1/3 cursor-pointer">
+                  <option value="all">All Time</option>
+                  <option value="thisWeek">This Week</option>
+                  <option value="lastWeek">Last Week</option>
+                  <option value="thisMonth">This Month</option>
+                  <option value="lastMonth">Last Month</option>
+                </select>
+                <div className="flex items-center gap-1 w-2/3 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5">
+                  <input type="date" value={startDate} onChange={(e) => {setStartDate(e.target.value); setQuickDate('custom');}} className="text-[9px] font-bold text-slate-500 bg-transparent outline-none w-full" />
+                  <span className="text-[8px] text-slate-300">TO</span>
+                  <input type="date" value={endDate} onChange={(e) => {setEndDate(e.target.value); setQuickDate('custom');}} className="text-[9px] font-bold text-slate-500 bg-transparent outline-none w-full" />
+                </div>
+              </div>
+              <button onClick={handleApplyFilters} className={`w-full py-2.5 rounded-lg text-[10px] font-black uppercase text-white shadow-sm transition-transform active:scale-95 bg-${modeColor}-500 hover:bg-${modeColor}-600`}>Find Students</button>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-              {displayQueue.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center p-10 text-center opacity-50">
-                  <span className="text-4xl mb-4">✨</span>
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-500">Queue is empty!</p>
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-2">All students served.</p>
-                </div>
-              ) : (
-                <ul className="divide-y divide-slate-50">
-                  {displayQueue.map((item) => (
-                    <li key={item.student_id} className="p-6 hover:bg-slate-50/80 transition-colors flex items-center justify-between group">
-                      <div>
-                        <h4 className="font-black text-slate-900 text-sm lg:text-lg leading-none tracking-tight">{item.name}</h4>
-                        <div className="flex items-center gap-2 mt-2 lg:mt-3">
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${item.type === 'SK' ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>{item.type}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.pkg}</span>
-                        </div>
+              <ul className="divide-y divide-slate-50">
+                {displayQueue.map((item) => (
+                  <li key={item.student_id} className="p-5 hover:bg-slate-50 transition-colors flex items-center justify-between group">
+                    <div>
+                      <h4 className="font-black text-slate-900 text-sm">{item.name}</h4>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${item.type === 'SK' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{item.type}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.pkg}</span>
                       </div>
-                      <div className="text-right">
-                        <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-md ${
-                          activeMode === 'PICKUP' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-blue-50 text-blue-600 border border-blue-100'
-                        }`}>
-                          {activeMode === 'PICKUP' ? 'Expected' : 'Ready'}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                    </div>
+                    <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-md border bg-${modeColor}-50 text-${modeColor}-600 border-${modeColor}-100`}>
+                      {activeMode === 'PICKUP' ? 'Expected' : activeMode === 'HANDOVER' ? 'Ready' : 'Done'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
-
         </div>
       </div>
     </div>
