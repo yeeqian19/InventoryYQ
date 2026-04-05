@@ -1,9 +1,9 @@
 import { google } from 'googleapis';
 import { Readable } from 'stream';
 
-// 1. Safety check to ensure keys are loaded
+// 1. Safety check to ensure keys are loaded — fail fast so errors surface at startup
 if (!process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_DRIVE_FOLDER_ID) {
-  console.warn("⚠️ Missing Google Drive environment variables in .env!");
+  throw new Error("Missing required Google Drive environment variables (GOOGLE_PRIVATE_KEY, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_DRIVE_FOLDER_ID).");
 }
 
 const auth = new google.auth.GoogleAuth({

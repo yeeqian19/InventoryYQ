@@ -59,3 +59,15 @@ model ScanLog {
 
   @@map("scan_log")
 }
+
+model Inventory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  count       Int      @default(0)
+  threshold   Int      @default(10)
+  link        String?  @db.Text      // Optional supplier link
+  isKitItem   Boolean  @default(false) // True for Ball/Bag/Bottle, False for EG
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -17,7 +17,7 @@ export default function Sidebar() {
   const lowerPath = pathname.toLowerCase();
   
   const { data: session } = useSession();
-  const userRole = (session?.user as any)?.role || 'BRANCH';
+  const userRole = session?.user?.role || 'BRANCH';
   const userName = session?.user?.name || session?.user?.email?.split('@')[0] || 'User';
 
   // 👈 Mobile Menu State

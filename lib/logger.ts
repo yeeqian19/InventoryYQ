@@ -12,7 +12,7 @@ type LogActionParams = {
 
 export async function logScanAction(data: LogActionParams) {
   try {
-    await (db as any).scanLog.create({
+    await db.scanLog.create({
       data: {
         doc_no: data.docNo || null,
         barcode: data.barcode,

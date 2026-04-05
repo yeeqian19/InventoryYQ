@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/route";
 import LoginClient from "./login/LoginClient";
-import LogoutButton from "./components/LogoutButton";
+import LogoutButton from "@/components/LogoutButton";
 
 export default async function RootPage() {
   const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export default async function RootPage() {
   }
 
   // Get user info from session
-  const role = (session?.user as any)?.role || "BRANCH";
+  const role = session?.user?.role || "BRANCH";
   const userName = session?.user?.name || "User";
 
   // RBAC Menu Logic
@@ -26,12 +26,12 @@ export default async function RootPage() {
       href: '/dashboard', 
       roles: ['SUPERADMIN', 'ADMIN'] 
     },
-    { 
-      name: 'RM DASHBOARD', 
-      icon: '📊', 
-      color: '#00c0ef', 
-      href: '/RM_Dashboard', 
-      roles: ['SUPERADMIN', 'ADMIN'] 
+    {
+      name: 'RM DASHBOARD',
+      icon: '📊',
+      color: '#00c0ef',
+      href: '/RM_Dashboard',
+      roles: ['SUPERADMIN']
     },
     { 
       name: 'MY INVENTORY BRANCH', 
@@ -46,6 +46,13 @@ export default async function RootPage() {
       color: '#605ca8', 
       href: '/stock-management', 
       roles: ['SUPERADMIN', 'ADMIN'] 
+    },
+    { 
+      name: 'STAFF MANAGEMENT', 
+      icon: '👥', 
+      color: '#1e293b', // Dark slate color to separate it as a system setting
+      href: '/staff-management', 
+      roles: ['SUPERADMIN'] // ONLY Superadmins can see this button
     },
   ];
 
@@ -68,21 +75,22 @@ export default async function RootPage() {
         </p>
 
         {/* GRID OF CARDS */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px' }}>
-          {visibleItems.map((item, index) => (
-            <Link href={item.href} key={index} style={{ textDecoration: 'none' }}>
-              <div 
-                style={{ 
-                  backgroundColor: item.color, 
-                  width: '200px', 
-                  height: '200px', 
-                  borderRadius: '35px', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  color: 'white', 
-                  boxShadow: '0 8px 15px rgba(0,0,0,0.1)', 
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', marginBottom: '40px' }}>
+          {visibleItems.map((item) => (
+            <Link href={item.href} key={item.href} style={{ textDecoration: 'none' }}>
+              <div
+                className="menu-card"
+                style={{
+                  backgroundColor: item.color,
+                  width: '200px',
+                  height: '200px',
+                  borderRadius: '35px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  boxShadow: '0 8px 15px rgba(0,0,0,0.1)',
                   cursor: 'pointer'
                 }}
               >

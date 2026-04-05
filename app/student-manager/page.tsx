@@ -1,5 +1,7 @@
 import { db } from '@/lib/db';
 import StudentManagerClient from './StudentManagerClient';
+import { resolveBranchCode } from '@/lib/branchUtils';
+import { resolveStudentType } from '@/lib/studentUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,44 +23,9 @@ export default async function StudentManagerPage() {
     },
   });
 
-  const validBranches = [
-    'ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 
-    'ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'KW', 'TSG'
-  ];
-  const correctionMap: Record<string, string> = { 'PJ': 'PJY', 'KL': 'KLG' };
-
   const tableData = rawStudents.flatMap((student) => {
-    let finalBranch = 'UNKNOWN';
-
-    if (student.doc_no) {
-      const parts = student.doc_no.toUpperCase().split(/[-_ ]+/); 
-      for (const part of parts) {
-        if (validBranches.includes(part)) {
-          finalBranch = part;
-          break;
-        }
-        if (correctionMap[part]) {
-          finalBranch = correctionMap[part];
-          break;
-        }
-      }
-    }
-    if (finalBranch === 'UNKNOWN' && student.branch_code) {
-      const rawCode = student.branch_code.toUpperCase().trim();
-      finalBranch = correctionMap[rawCode] || rawCode;
-    }
-
-    let sType = 'Other';
-    const rawType = (student.type || '').trim().toLowerCase();
-    const rawPkg = (student.package || '').trim().toLowerCase();
-
-    if (rawType === 'new' || rawPkg === 'new') {
-        sType = 'New';
-    } else if (rawType === 'renewal') {
-        sType = 'Renewal';
-    } else if (rawType === 'trial') {
-        sType = 'Trial';
-    }
+    const finalBranch = resolveBranchCode(student.branch_code, student.doc_no);
+    const sType = resolveStudentType(student.type, student.package);
 
     // --- THE SPLITTER LOGIC ---
     const rawName = student.student_name || 'Unknown';
@@ -81,7 +48,7 @@ export default async function StudentManagerPage() {
       if (student.doc_date) {
           try {
               formattedDate = new Date(student.doc_date).toISOString().split('T')[0];
-          } catch (e) {
+          } catch {
               formattedDate = '';
           }
       }

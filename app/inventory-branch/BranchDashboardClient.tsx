@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import PhotoCapturePanel from '@/components/PhotoCapturePanel';
@@ -58,23 +58,33 @@ type InventoryItem = {
   date?: string;
 };
 
-export default function BranchDashboardClient({ initialData }: { initialData: InventoryItem[] }) {
+type Props = {
+  initialData: InventoryItem[];
+  userRole: string;
+  userBranchCode: string;
+};
+
+export default function BranchDashboardClient({ initialData, userRole, userBranchCode }: Props) {
   const router = useRouter();
+  const isBranchManager = userRole === 'BRANCH';
 
   // Sort branches alphabetically for the dropdown
   const SORTED_BRANCHES = useMemo(() => {
     return [...BRANCH_MASTER_LIST].sort((a, b) => a.code.localeCompare(b.code));
   }, []);
 
-  // Use the first sorted branch as default
-  const [activeBranch, setActiveBranch] = useState(SORTED_BRANCHES[0].code);
+  // Branch managers are locked to their own branch; admins can switch freely
+  const defaultBranch = isBranchManager && userBranchCode
+    ? userBranchCode
+    : SORTED_BRANCHES[0].code;
+
+  const [activeBranch, setActiveBranch] = useState(defaultBranch);
   const [activeMode, setActiveMode] = useState<'PICKUP' | 'HANDOVER' | 'HISTORY'>('PICKUP');
 
-  // Camera & Scan State
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  // Camera & Scan State - Scanner initialized as open for high-speed mode
+  const [isCameraOpen, setIsCameraOpen] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanMessage, setScanMessage] = useState({ text: '', type: '' });
-  const [lastScanned, setLastScanned] = useState('');
 
   // Proof of Handover/Pickup State
   const [pendingHandoverBarcode, setPendingHandoverBarcode] = useState('');
@@ -186,68 +196,82 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
     return student ? student.name : 'Unknown Student';
   }, [pendingHandoverBarcode, pendingPickupBarcode, branchData]);
 
+  // --- FAST SYNC WITH OPTIMISTIC UI ---
+  const handleFastSync = async (endpoint: string, payload: Record<string, unknown>) => {
+    // OPTIMISTIC UI UPDATE - Apply FIRST before network request
+    setPendingHandoverBarcode('');
+    setPendingPickupBarcode('');
+    setCapturedPhoto(null);
+    setIsCameraOpen(true); // Re-open scanner for next item immediately
+    setScanMessage({ text: '🚀 Processing in background...', type: 'success' });
+    
+    // Clear message after 1500ms
+    setTimeout(() => {
+      setScanMessage({ text: '', type: '' });
+    }, 1500);
+
+    // Background network request
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        router.refresh();
+      } else {
+        const data = await response.json();
+        setScanMessage({ text: `❌ ${data.error}`, type: 'error' });
+        setTimeout(() => setScanMessage({ text: '', type: '' }), 3000);
+      }
+    } catch {
+      setScanMessage({ text: '❌ Network Error.', type: 'error' });
+      setTimeout(() => setScanMessage({ text: '', type: '' }), 3000);
+    }
+  };
+
   const processScan = async (barcodeText: string) => {
     if (!barcodeText.trim() || isProcessing || activeMode === 'HISTORY') return;
-    setLastScanned(barcodeText);
-    setIsCameraOpen(false);
 
     if (activeMode === 'HANDOVER') setPendingHandoverBarcode(barcodeText);
     if (activeMode === 'PICKUP') setPendingPickupBarcode(barcodeText);
+    
+    // Only close camera when valid barcode is scanned (to reveal photo panel)
+    setIsCameraOpen(false);
   };
 
+  // --- SUBMIT PICKUP (High-Speed Mode) ---
   const submitPickupToDatabase = async (barcode: string, photoBase64: string | null) => {
     if (!photoBase64) return;
     setIsProcessing(true);
-    setScanMessage({ text: '📤 Uploading BM Pick Up photo...', type: 'info' });
-    try {
-      const response = await fetch('/api/bm-pickup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64Data: photoBase64, barcode, branchCode: activeBranch }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setScanMessage({ text: `✅ BM Pick Up Confirmed!`, type: 'success' });
-        setPendingPickupBarcode('');
-        setCapturedPhoto(null);
-        router.refresh();
-      } else {
-        setScanMessage({ text: `❌ ${data.error}`, type: 'error' });
-      }
-    } catch (err) {
-      setScanMessage({ text: '❌ Network Error.', type: 'error' });
-    } finally {
-      setIsProcessing(false);
-      setTimeout(() => setScanMessage({ text: '', type: '' }), 3000);
-    }
+    
+    // Use handleFastSync for instant optimistic UI update
+    await handleFastSync('/api/bm-pickup', {
+      base64Data: photoBase64,
+      barcode,
+      branchCode: activeBranch,
+    });
+    
+    setIsProcessing(false);
   };
 
+  // --- SUBMIT HANDOVER (High-Speed Mode) ---
   const submitHandoverToDatabase = async (barcode: string, photoBase64: string | null) => {
     if (!photoBase64) return;
     setIsProcessing(true);
-    setScanMessage({ text: '📤 Uploading photo & archiving...', type: 'info' });
-    try {
-      const student = branchData.find(s => s.skBarcode === barcode || s.egBarcode === barcode);
-      const response = await fetch('/api/handover', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64Data: photoBase64, barcode, studentName: student?.name || barcode, branchCode: activeBranch }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setScanMessage({ text: `✅ Handover Complete!`, type: 'success' });
-        setPendingHandoverBarcode('');
-        setCapturedPhoto(null);
-        router.refresh();
-      } else {
-        setScanMessage({ text: `❌ ${data.error}`, type: 'error' });
-      }
-    } catch (err) {
-      setScanMessage({ text: '❌ Network Error.', type: 'error' });
-    } finally {
-      setIsProcessing(false);
-      setTimeout(() => setScanMessage({ text: '', type: '' }), 3000);
-    }
+    
+    const student = branchData.find(s => s.skBarcode === barcode || s.egBarcode === barcode);
+    
+    // Use handleFastSync for instant optimistic UI update
+    await handleFastSync('/api/handover', {
+      base64Data: photoBase64,
+      barcode,
+      studentName: student?.name || barcode,
+      branchCode: activeBranch,
+    });
+    
+    setIsProcessing(false);
   };
 
   const modeColor = activeMode === 'PICKUP' ? 'amber' : activeMode === 'HANDOVER' ? 'blue' : 'emerald';
@@ -308,11 +332,19 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
           </div>
           <div className="flex flex-col gap-1.5 w-full lg:w-auto">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest lg:text-right">Terminal Location</label>
-            <select value={activeBranch} onChange={(e) => setActiveBranch(e.target.value)} className="bg-white border border-slate-200 rounded-xl px-6 py-2.5 text-sm font-black text-slate-700 outline-none shadow-sm cursor-pointer">
-              {SORTED_BRANCHES.map(b => (
-                <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
-              ))}
-            </select>
+            {isBranchManager ? (
+              // Branch managers are locked to their own branch
+              <div className="bg-slate-100 border border-slate-200 rounded-xl px-6 py-2.5 text-sm font-black text-slate-700 shadow-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+                {activeBranch} Branch — Locked
+              </div>
+            ) : (
+              <select value={activeBranch} onChange={(e) => setActiveBranch(e.target.value)} className="bg-white border border-slate-200 rounded-xl px-6 py-2.5 text-sm font-black text-slate-700 outline-none shadow-sm cursor-pointer">
+                {SORTED_BRANCHES.map(b => (
+                  <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -365,6 +397,8 @@ export default function BranchDashboardClient({ initialData }: { initialData: In
                   onCancel={() => {setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}}
                   submitLabel={activeMode === 'HANDOVER' ? "Complete Handover" : "Confirm Pick Up"}
                   accentColor={modeColor}
+                  exampleImage={activeMode === 'HANDOVER' ? '/example-handover.jpg' : '/example-pickup.jpg'}
+                  exampleCaption={activeMode === 'HANDOVER' ? 'Example: Student holding items, face clearly visible' : 'Example: Person & items visible — only ONE person in photo'}
                 />
               ) : (
                 <div className="flex flex-col items-center p-8 text-center mt-6">

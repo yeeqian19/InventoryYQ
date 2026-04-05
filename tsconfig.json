@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,9 +23,13 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
+      "@/*": [
+        "./*"
+      ],
       /* 🟢 FIXED: Pointing to 'prisma' directly, matching your actual sidebar */
-      ".prisma/client": ["./lib/generated/prisma"] 
+      ".prisma/client": [
+        "./lib/generated/prisma"
+      ]
     }
   },
   "include": [
@@ -29,10 +37,13 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
     "**/*.mts",
     /* 🟢 FIXED: Pointing to index.d.ts directly inside the prisma folder */
-    "./lib/generated/prisma/index.d.ts"
+    "./lib/generated/prisma/index.d.ts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    ".next"
+  ]
 }

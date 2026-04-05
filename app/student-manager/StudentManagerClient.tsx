@@ -74,6 +74,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
     return ['All Branches', ...BRANCH_MASTER_LIST.sort()];
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
 
   // --- UPDATED DATE HANDLERS ---
@@ -134,23 +135,46 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
     });
   }, [initialData]);
 
+  // 🟢 THIS IS THE FIXED BLOCK 🟢
   const filteredStudents = useMemo(() => {
     let data = processedInitialData; 
+    
+    // 1. Filter out missing barcodes
     data = data.filter(s => { 
       const code = activeSystem === 'SK' ? s.skBarcode : s.egBarcode; 
       return code && code !== 'N/A' && code.trim() !== ''; 
     });
-    if (searchTerm) data = data.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (activeFilter.branch !== 'all') data = data.filter(s => s.branch === activeFilter.branch);
-    if (activeFilter.type !== 'All') data = data.filter(s => s.studentType === activeFilter.type);
+
+    // 2. Live Search (Name)
+    if (searchTerm) {
+      data = data.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+
+    // 3. Branch Filter
+    if (activeFilter.branch !== 'all') {
+      data = data.filter(s => s.branch === activeFilter.branch);
+    }
+
+    // 4. Type Filter (Safeguarded with toLowerCase to prevent exact-match bugs)
+    if (activeFilter.type !== 'All') {
+      data = data.filter(s => s.studentType?.toLowerCase() === activeFilter.type.toLowerCase());
+    }
     
-    // Updated date filter to handle "All Time" (empty strings)
+    // 5. Date Filter (FIXED TIMEZONE/TIMESTAMP BUG)
     if (activeFilter.start && activeFilter.end) {
-      data = data.filter(s => s.date >= activeFilter.start && s.date <= activeFilter.end);
+      data = data.filter(s => {
+        if (!s.date) return false;
+        
+        // Force the DB date to only look at YYYY-MM-DD so time stamps don't ruin the math
+        const studentDateOnly = s.date.substring(0, 10);
+        
+        return studentDateOnly >= activeFilter.start && studentDateOnly <= activeFilter.end;
+      });
     }
     
     return data;
   }, [activeFilter, processedInitialData, searchTerm, activeSystem]);
+  // 🟢 END OF FIXED BLOCK 🟢
 
   const selectedStudentsForPrint = useMemo(() => filteredStudents.filter(s => selectedIds.includes(s.student_id)), [selectedIds, filteredStudents]);
 
@@ -178,8 +202,9 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
           @page { size: A4 portrait; margin: 10mm; }
           body { background: white !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
-          .print-label-container { display: grid !important; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; width: 190mm; height: 275mm; margin: 0 auto; gap: 5mm; padding: 0; box-sizing: border-box; justify-items: center; align-items: center; }
-          .page-break { display: block; break-after: page; grid-column: 1 / -1; }
+          .print-label-container { display: grid !important; grid-template-columns: 1fr 1fr; width: 190mm; margin: 0 auto; gap: 5mm; padding: 0; box-sizing: border-box; justify-items: center; align-items: start; }
+          .print-label-container > div { page-break-inside: avoid; break-inside: avoid; }
+          .page-break { display: block !important; break-after: page; grid-column: 1 / -1; height: 0; margin: 0; padding: 0; }
         }
       `}</style>
 
@@ -195,8 +220,40 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
 
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Branch</label>
-              <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="bg-emerald-50 border-none rounded-xl px-5 py-3 text-sm font-black text-emerald-700 outline-none min-w-[140px] cursor-pointer">
-                {BRANCHES.map((branch) => <option key={branch} value={branch === 'All Branches' ? 'all' : branch}>{branch}</option> )}
+              <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="bg-emerald-50 border-none rounded-xl px-5 py-3 text-sm font-black text-emerald-700 outline-none min-w-[180px] cursor-pointer">
+                <option value="all">All Branches</option>
+                <optgroup label="── Region A ──">
+                  <option value="RBY">RBY (Rimbayu)</option>
+                  <option value="KLG">KLG (Klang)</option>
+                  <option value="SHA">SHA (Shah Alam)</option>
+                  <option value="SA">SA (Setia Alam)</option>
+                  <option value="DA">DA (Denai Alam)</option>
+                  <option value="EGR">EGR (Eco Grandeur)</option>
+                  <option value="ST">ST (Subang Taipan)</option>
+                  <option value="AC">AC (Anggun City Rawang)</option>
+                  <option value="SBY">SBY (Sungai Buloh)</option>
+                </optgroup>
+                <optgroup label="── Region B ──">
+                  <option value="SLY">SLY (Selayang)</option>
+                  <option value="DK">DK (Danau Kota)</option>
+                  <option value="KD">KD (Kota Damansara)</option>
+                  <option value="AMP">AMP (Ampang)</option>
+                  <option value="SP">SP (Sri Petaling)</option>
+                  <option value="BTHO">BTHO (Bandar Tun Hussein Onn)</option>
+                  <option value="KTG">KTG (Kajang TTDI Groove)</option>
+                  <option value="DSH">DSH (Desa Sri Hartamas)</option>
+                  <option value="TSG">TSG (Taman Sri Gombak)</option>
+                </optgroup>
+                <optgroup label="── Region C ──">
+                  <option value="PJY">PJY (Putrajaya)</option>
+                  <option value="KW">KW (Kota Warisan)</option>
+                  <option value="BBB">BBB (Bandar Baru Bangi)</option>
+                  <option value="CJY">CJY (Cyberjaya)</option>
+                  <option value="BSP">BSP (Bandar Seri Putra)</option>
+                  <option value="SNT">SNT (Senawang Taipan)</option>
+                  <option value="SBN">SBN (Seremban)</option>
+                  <option value="DP">DP (Dataran Puchong Utama)</option>
+                </optgroup>
               </select>
             </div>
 
@@ -242,7 +299,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
                   Print Labels
                 </button>
               </div>
-              <p className="text-[9px] font-bold text-rose-500 no-print uppercase tracking-tighter">⚠️ Use "Actual Size" & "A4" in Printer Settings</p>
+              <p className="text-[9px] font-bold text-rose-500 no-print uppercase tracking-tighter">⚠️ Use &quot;Actual Size&quot; &amp; &quot;A4&quot; in Printer Settings</p>
             </div>
           </div>
         </div>
@@ -331,7 +388,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
                   </div>
                 </div>
               </div>
-              {(index + 1) % 6 === 0 && <div className="page-break" />}
+              {(index + 1) % 6 === 0 && index < selectedStudentsForPrint.length - 1 && <div className="page-break" />}
             </React.Fragment>
            );
         })}

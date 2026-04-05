@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -71,8 +70,6 @@ export default function DashboardClient({
   user?: DashboardUser 
 }) {
   const [hasMounted, setHasMounted] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const router = useRouter();
   
   const [activeRegion, setActiveRegion] = useState<Region>('ALL');
   const [selectedBranch, setSelectedBranch] = useState('All Branches');
@@ -107,6 +104,7 @@ export default function DashboardClient({
     return ['All Branches', ...list.map(b => b.code).sort()];
   }, [activeRegion]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
 
   const handleDropdownChange = (val: string) => {
@@ -185,7 +183,7 @@ export default function DashboardClient({
   const completionRate = totalItems > 0 ? Math.round((totalPrepared / totalItems) * 100) : 0;
 
   const chartData = useMemo(() => {
-    const grouped: Record<string, any> = {};
+    const grouped: Record<string, { name: string; prepared: number; unprepared: number }> = {};
     filteredData.forEach((item) => {
       const typeKey = item.itemType; 
       if (!grouped[typeKey]) grouped[typeKey] = { name: typeKey, prepared: 0, unprepared: 0 };
