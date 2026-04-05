@@ -10,7 +10,7 @@ export interface EmailPayload {
   title: string;
   subtitle?: string;
   detailsArray: EmailDetail[];
-  photoLink: string;
+  photoLink?: string;
 }
 
 export function generateEmailHTML(payload: EmailPayload): string {
@@ -45,12 +45,13 @@ export function generateEmailHTML(payload: EmailPayload): string {
         ${rows}
       </table>
 
+      ${photoLink ? `
       <div style="margin-top:28px;text-align:center">
         <a href="${photoLink}" target="_blank"
            style="display:inline-block;background:#10b981;color:white;padding:14px 32px;border-radius:999px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:0.5px">
           📷 Open Full Photo Proof
         </a>
-      </div>
+      </div>` : ''}
 
       <p style="margin-top:24px;font-size:11px;color:#9ca3af;text-align:center">
         This is an automated message from My Inventory System.

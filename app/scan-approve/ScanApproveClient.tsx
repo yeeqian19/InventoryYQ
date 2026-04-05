@@ -84,7 +84,7 @@ export default function ScanApproveClient() {
           station: data.station || `${activeStation}. PACKING (HQ)`
         }, ...prev].slice(0, 50));
       }
-    } catch (err) {
+    } catch {
       setScanHistory(prev => [{
         barcode: currentBarcode,
         status: 'error' as const,

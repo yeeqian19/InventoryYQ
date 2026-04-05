@@ -6,10 +6,9 @@ import { Pool } from 'pg';
 // 1. Setup Global Prisma to prevent multiple connections during development
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-// 2. Create the connection pool with 'as any' to fix the Type Error (Pool Config)
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-}) as any;
+// 2. Create the connection pool
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pool = new Pool({ connectionString: process.env.DATABASE_URL }) as any;
 
 // 3. Wrap the pool in the official Prisma adapter
 const adapter = new PrismaPg(pool);

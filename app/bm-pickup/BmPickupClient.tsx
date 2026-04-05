@@ -8,63 +8,72 @@ import PhotoCapturePanel from '@/components/PhotoCapturePanel';
 export default function BmPickupClient() {
   const router = useRouter();
   
-  // State
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  // State - Scanner initialized as open for high-speed mode
+  const [isCameraOpen, setIsCameraOpen] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanMessage, setScanMessage] = useState({ text: '', type: '' });
-  const [lastScanned, setLastScanned] = useState('');
   
   // Photo capture state
   const [pendingBarcode, setPendingBarcode] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
 
+  // --- FAST SYNC WITH OPTIMISTIC UI ---
+  const handleFastSync = async (endpoint: string, payload: Record<string, unknown>) => {
+    // OPTIMISTIC UI UPDATE - Apply FIRST before network request
+    setPendingBarcode('');
+    setCapturedPhoto(null);
+    setIsCameraOpen(true); // Re-open scanner for next item immediately
+    setScanMessage({ text: '🚀 Processing in background...', type: 'success' });
+    
+    // Clear message after 1500ms
+    setTimeout(() => {
+      setScanMessage({ text: '', type: '' });
+    }, 1500);
+
+    // Background network request
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        router.refresh();
+      } else {
+        const data = await response.json();
+        setScanMessage({ text: `❌ ${data.error}`, type: 'error' });
+        setTimeout(() => setScanMessage({ text: '', type: '' }), 3000);
+      }
+    } catch {
+      setScanMessage({ text: '❌ Network Error.', type: 'error' });
+      setTimeout(() => setScanMessage({ text: '', type: '' }), 3000);
+    }
+  };
+
   // --- SCAN HANDLER ---
   const processScan = async (barcodeText: string) => {
     if (!barcodeText.trim() || isProcessing || pendingBarcode) return;
-    setLastScanned(barcodeText);
-    
+
     // Set pending barcode FIRST (triggers early return to show PhotoCapturePanel)
-    // Then close camera
     setPendingBarcode(barcodeText);
+    // Only close camera when valid barcode is scanned (to reveal photo panel)
     setIsCameraOpen(false);
   };
 
-  // --- SUBMIT TO DATABASE ---
+  // --- SUBMIT TO DATABASE (High-Speed Mode) ---
   const submitToDatabase = async () => {
     if (!pendingBarcode || !capturedPhoto) return;
     setIsProcessing(true);
-    setScanMessage({ text: '📤 Uploading photo & confirming pickup...', type: 'info' });
-
-    try {
-      const response = await fetch('/api/bm-pickup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          base64Data: capturedPhoto,
-          barcode: pendingBarcode,
-          branchCode: 'HQ', // BM Pickup is from HQ
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setScanMessage({ text: `✅ BM Pickup Confirmed!`, type: 'success' });
-        setPendingBarcode('');
-        setCapturedPhoto(null);
-        // Keep camera open for next scan
-        setTimeout(() => setIsCameraOpen(true), 1500);
-      } else {
-        setScanMessage({ text: `❌ ${data.error}`, type: 'error' });
-      }
-    } catch (err) {
-      setScanMessage({ text: '❌ Network Error.', type: 'error' });
-    } finally {
-      setIsProcessing(false);
-      setTimeout(() => {
-        setScanMessage({ text: '', type: '' });
-      }, 3000);
-    }
+    
+    // Use handleFastSync for instant optimistic UI update
+    await handleFastSync('/api/bm-pickup', {
+      base64Data: capturedPhoto,
+      barcode: pendingBarcode,
+      branchCode: 'HQ', // BM Pickup is from HQ
+    });
+    
+    setIsProcessing(false);
   };
 
   // --- CANCEL HANDLER ---

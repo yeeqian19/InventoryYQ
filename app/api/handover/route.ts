@@ -2,29 +2,33 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { uploadToGoogleDrive } from '@/lib/googleDrive';
 import { generateEmailHTML } from '@/lib/emailTemplate';
-import { logScanAction } from '@/lib/logger'; // 👈 NEW: Imported your logger
-import nodemailer from 'nodemailer';
+import { logScanAction } from '@/lib/logger';
+import { transporter } from '@/lib/emailTransport';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import type { HandoverRequestBody } from '@/types';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+interface UploadResult {
+  fileId: string;
+  webViewLink: string;
+}
 
-export async function POST(req: Request) {
+export async function POST(req: Request): Promise<NextResponse> {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const { base64Data, barcode, studentName, branchCode } = await req.json();
+    const body = await req.json() as HandoverRequestBody;
+    const { base64Data, barcode, studentName, branchCode } = body;
 
     if (!base64Data || !barcode) {
       return NextResponse.json({ error: 'base64Data and barcode are required.' }, { status: 400 });
     }
 
     // 1. Initial Check: Find the record to validate and get data for the logger
-    const record = await (db.inventory_distribution as any).findFirst({
+    const record = await db.inventory_distribution.findFirst({
       where: {
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },
@@ -44,21 +48,21 @@ export async function POST(req: Request) {
     const fileName = `${branchCode || record.branch_code || 'BR'}-${barcode}-${Date.now()}.jpg`;
 
     // Step A: Upload photo to Google Drive
-    const { fileId, webViewLink } = await uploadToGoogleDrive(base64Data, fileName);
+    const { fileId, webViewLink }: UploadResult = await uploadToGoogleDrive(base64Data, fileName);
 
     // Step B: Update database with ATOMIC LOCK (fixes double email bug)
-    const updateResult = await (db.inventory_distribution as any).updateMany({
+    const updateResult = await db.inventory_distribution.updateMany({
       where: {
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },
           { barcode_eg: { equals: barcode, mode: 'insensitive' } },
         ],
-        student_received: false, // 👈 THE LOCK: Only updates if it hasn't been handed over yet
+        student_received: false,
       },
       data: {
         student_received: true,
         student_received_date: new Date(),
-        proof_photo: webViewLink, // Storing full Drive link for the email template
+        proof_photo: webViewLink,
       },
     });
 
@@ -67,9 +71,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Item was just handed over by another request.' }, { status: 400 });
     }
 
-    // Step C: 🚨 RECORD THE SCAN IN THE AUDIT TRAIL LOG 🚨
+    // Step C: RECORD THE SCAN IN THE AUDIT TRAIL LOG
     await logScanAction({
-      docNo: record.doc_no || 'N/A', 
+      docNo: record.doc_no ?? null, 
       barcode: barcode,
       studentName: studentName || record.student_name || 'Unknown',
       itemType: barcode.includes('-SK-') ? 'SK' : 'EG',
@@ -80,7 +84,6 @@ export async function POST(req: Request) {
 
     // Step D: Send email using shared template
     const base64Only = base64Data.replace(/^data:image\/\w+;base64,/, '');
-
     const html = generateEmailHTML({
       title: '✅ Enrollment Gift Handed Over',
       detailsArray: [
@@ -121,8 +124,9 @@ export async function POST(req: Request) {
       webViewLink,
     });
 
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
     console.error('Handover API error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

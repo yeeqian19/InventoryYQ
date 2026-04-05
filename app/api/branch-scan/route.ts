@@ -1,25 +1,38 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import nodemailer from 'nodemailer';
+import { transporter } from '@/lib/emailTransport';
+import { generateEmailHTML } from '@/lib/emailTemplate';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+interface BranchScanRequest {
+  barcode: string;
+  mode: 'PICKUP' | 'HANDOVER';
+  branch?: string;
+}
 
-export async function POST(req: Request) {
+interface BranchScanResponse {
+  message?: string;
+  student_name?: string | null;
+  error?: string;
+}
+
+export async function POST(req: Request): Promise<NextResponse<BranchScanResponse>> {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const { barcode: rawBarcode, mode, branch: rawBranch } = await req.json();
+    const body = await req.json() as BranchScanRequest;
+    const { barcode: rawBarcode, mode, branch: rawBranch } = body;
 
     const barcode = rawBarcode?.trim() || '';
     const branch = rawBranch?.trim() || '';
 
-    if (!barcode) return NextResponse.json({ error: 'Barcode is required.' }, { status: 400 });
+    if (!barcode) {
+      return NextResponse.json({ error: 'Barcode is required.' }, { status: 400 });
+    }
 
     if (mode !== 'PICKUP' && mode !== 'HANDOVER') {
       return NextResponse.json({ error: 'Invalid mode.' }, { status: 400 });
@@ -34,7 +47,9 @@ export async function POST(req: Request) {
       }
     });
 
-    if (!record) return NextResponse.json({ error: 'Barcode not found in database.' }, { status: 404 });
+    if (!record) {
+      return NextResponse.json({ error: 'Barcode not found in database.' }, { status: 404 });
+    }
 
     // Block Accounting Records
     if (record.doc_no?.startsWith('FD-') || record.student_name?.toLowerCase().includes('interest')) {
@@ -73,35 +88,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Already Handed Over to Student.' }, { status: 400 });
     }
 
-    // 🟢 UPDATED: Skip photo upload and save to DB for now
+    // Skip photo upload and save to DB for now
     const updated = await db.inventory_distribution.update({
       where: { student_id: record.student_id },
       data: {
         student_received: true,
         student_received_date: new Date(),
-        // 🔴 proof_photo / google_drive_file_id removed so it won't crash
       }
     });
 
-    // Send email notification (Still works!)
+    // Send email notification
     try {
+      const timestamp = new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' });
+      const html = generateEmailHTML({
+        title: '✅ Enrollment Gift Handed Over',
+        detailsArray: [
+          { label: 'Student',    value: updated.student_name ?? 'N/A' },
+          { label: 'Branch',     value: updated.branch_code  ?? 'N/A' },
+          { label: 'Barcode',    value: rawBarcode },
+          { label: 'Date & Time', value: timestamp },
+        ],
+      });
       await transporter.sendMail({
-        from: process.env.SMTP_USER,
+        from: `"Inventory System" <${process.env.SMTP_USER}>`,
         to: process.env.NOTIFY_EMAIL,
-        subject: `Handover Completed – ${updated.student_name}`,
-        html: `
-          <div style="font-family:sans-serif;padding:24px;max-width:500px;border:1px solid #e5e7eb;border-radius:12px">
-            <h2 style="color:#10b981">✅ Enrollment Gift Handed Over</h2>
-            <table style="width:100%;border-collapse:collapse;margin-top:16px">
-              <tr><td style="padding:8px;color:#6b7280;font-size:13px">Student</td><td style="padding:8px;font-weight:bold">${updated.student_name}</td></tr>
-              <tr style="background:#f9fafb"><td style="padding:8px;color:#6b7280;font-size:13px">Branch</td><td style="padding:8px;font-weight:bold">${updated.branch_code}</td></tr>
-              <tr><td style="padding:8px;color:#6b7280;font-size:13px">Barcode</td><td style="padding:8px;font-family:monospace">${rawBarcode}</td></tr>
-              <tr style="background:#f9fafb"><td style="padding:8px;color:#6b7280;font-size:13px">Date & Time</td><td style="padding:8px">${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}</td></tr>
-              <tr><td style="padding:8px;color:#6b7280;font-size:13px">Photo Proof</td><td style="padding:8px;color:#ef4444">Pending Google Drive Setup</td></tr>
-            </table>
-            <p style="margin-top:24px;font-size:12px;color:#9ca3af">This is an automated message from My Inventory System.</p>
-          </div>
-        `,
+        subject: `✅ Handover Completed – ${updated.student_name}`,
+        html,
       });
     } catch (emailErr) {
       console.error('Email send error:', emailErr);
@@ -109,8 +121,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: 'Handover Successful', student_name: updated.student_name });
 
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
     console.error('Branch Scan Error:', error);
-    return NextResponse.json({ error: error?.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

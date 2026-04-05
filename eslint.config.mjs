@@ -12,7 +12,18 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated files
+    "lib/generated/**",
   ]),
+  // Disable rules that fail on generated Prisma files
+  {
+    files: ["lib/generated/**"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-this-alias": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

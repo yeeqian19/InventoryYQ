@@ -1,19 +1,29 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { logScanAction } from '@/lib/logger'; // 👈 NEW: Imported the logger
+import { logScanAction } from '@/lib/logger';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import type { ScanRequestBody, ScanResponse } from '@/types';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse<ScanResponse | { error: string }>> {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const body = await request.json();
-    const barcode = body.barcode as string;
-    const station = Number(body.station);
+    const body = await request.json() as ScanRequestBody;
+    const barcode = body.barcode;
+    const station = body.station;
 
-    if (!barcode) return NextResponse.json({ error: 'No barcode provided' }, { status: 400 });
+    if (!barcode) {
+      return NextResponse.json({ error: 'No barcode provided' }, { status: 400 });
+    }
 
     const stationNum = station || 1;
     const trimmedBarcode = barcode.trim().toUpperCase();
     
-    let record = await db.inventory_distribution.findFirst({
+    const record = await db.inventory_distribution.findFirst({
       where: {
         OR: [
           { barcode_sk: { contains: trimmedBarcode, mode: 'insensitive' } },
@@ -22,7 +32,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!record) return NextResponse.json({ error: 'Barcode not found' }, { status: 404 });
+    if (!record) {
+      return NextResponse.json({ error: 'Barcode not found' }, { status: 404 });
+    }
 
     // --- SAFETY CHECK: Handover (St 3) requires Pickup (St 2) ---
     if (stationNum === 3 && !record.bm_pickup) {
@@ -32,76 +44,76 @@ export async function POST(request: NextRequest) {
     }
 
     const isSKBarcode = record.barcode_sk?.toUpperCase().includes(trimmedBarcode);
-    const isEGBarcode = record.barcode_eg?.toUpperCase().includes(trimmedBarcode);
 
     // --- SETUP ATOMIC LOCK & UPDATE DATA ---
-    let updateData: any = {};
-    let lockCondition: any = {};
+    const updateData: Record<string, unknown> = {};
+    const lockCondition: Record<string, unknown> = {};
     let actionTypeForLogger: 'PREPARED' | 'PICKED UP' | 'RECEIVED' = 'PREPARED';
 
     if (stationNum === 1) {
       if (isSKBarcode) {
-        updateData = { sk_prep: true, sk_prep_date: new Date() };
-        lockCondition = { sk_prep: false }; // Lock
+        updateData.sk_prep = true;
+        updateData.sk_prep_date = new Date();
+        lockCondition.sk_prep = false;
       } else {
-        updateData = { eg_prep: true, eg_prep_date: new Date() };
-        lockCondition = { eg_prep: false }; // Lock
+        updateData.eg_prep = true;
+        updateData.eg_prep_date = new Date();
+        lockCondition.eg_prep = false;
       }
       actionTypeForLogger = 'PREPARED';
     } 
     else if (stationNum === 2) {
-      updateData = { bm_pickup: true, bm_pickup_date: new Date() };
-      lockCondition = { bm_pickup: false }; // Lock
+      updateData.bm_pickup = true;
+      updateData.bm_pickup_date = new Date();
+      lockCondition.bm_pickup = false;
       actionTypeForLogger = 'PICKED UP';
     } 
     else if (stationNum === 3) {
-      updateData = { 
-        student_received: true, 
-        student_received_date: new Date(),
-        proof_photo: null 
-      };
-      lockCondition = { student_received: false }; // Lock
+      updateData.student_received = true;
+      updateData.student_received_date = new Date();
+      updateData.proof_photo = null;
+      lockCondition.student_received = false;
       actionTypeForLogger = 'RECEIVED';
     }
 
     // --- DATABASE UPDATE WITH ATOMIC LOCK ---
-    const updateResult = await (db.inventory_distribution as any).updateMany({
+    const updateResult = await db.inventory_distribution.updateMany({
       where: { 
         student_id: record.student_id,
-        ...lockCondition // 👈 The Bouncer! Prevents double-scans perfectly
+        ...lockCondition
       },
       data: updateData,
     });
 
     // If count is 0, the lock blocked it (already scanned)
     if (updateResult.count === 0) {
-      return NextResponse.json({ error: 'ALREADY SCANNED / PROCESSED', student_name: record.student_name }, { status: 400 });
+      return NextResponse.json({ error: 'ALREADY SCANNED / PROCESSED', student_name: record.student_name ?? undefined }, { status: 400 });
     }
 
-    // --- 🚨 RECORD THE SCAN IN THE AUDIT TRAIL LOG 🚨 ---
+    // --- RECORD THE SCAN IN THE AUDIT TRAIL LOG ---
     await logScanAction({
-      docNo: record.doc_no || 'N/A',
+      docNo: record.doc_no ?? null,
       barcode: trimmedBarcode,
-      studentName: record.student_name || 'Unknown',
+      studentName: record.student_name ?? 'Unknown',
       itemType: isSKBarcode ? 'SK' : 'EG',
-      branch: record.branch_code || 'HQ', // Defaults to HQ if missing
+      branch: record.branch_code ?? 'HQ',
       actionType: actionTypeForLogger,
-      // Assigns processedBy based on the station number
-      processedBy: stationNum === 1 ? 'Ashwin (HQ)' : (stationNum === 2 ? 'BM (Approve)' : 'Admin (Approve)'),
+      processedBy: session.user?.name ?? 'System',
     });
 
     return NextResponse.json({
       success: true,
       message: `${record.student_name} approved!`,
-      student_name: record.student_name,
+      student_name: record.student_name ?? undefined,
       station: stationNum,
       photoSaved: false,
       itemType: isSKBarcode ? 'Starter Kit (SK)' : 'Enrollment Gift (EG)',
       branch: record.branch_code ?? 'N/A',
     }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Scan API error:', error);
-    return NextResponse.json({ error: 'System Error: ' + error.message }, { status: 500 });
+    return NextResponse.json({ error: 'System Error: ' + message }, { status: 500 });
   }
 }

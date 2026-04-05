@@ -14,12 +14,13 @@ export default function RootLayout({
   const lowerPath = pathname?.toLowerCase() || '';
 
   // 1. If the path contains these words, we want NO SIDEBAR and NO HQ LAYOUT
-  const isSpecialPage = 
-    lowerPath === '/' || 
-    lowerPath === '/login' || 
-    lowerPath.includes('rm_dashboard') || 
-    lowerPath.includes('stock-management') || 
-    lowerPath.includes('inventory-branch');
+  const isSpecialPage =
+    lowerPath === '/' ||
+    lowerPath === '/login' ||
+    lowerPath.includes('rm_dashboard') ||
+    lowerPath.includes('stock-management') ||
+    lowerPath.includes('inventory-branch') ||
+    lowerPath.includes('staff-management');
 
   // 🚨 FIXED ERROR: We now use ONE <html> tag to prevent Next.js hydration crashes
   return (

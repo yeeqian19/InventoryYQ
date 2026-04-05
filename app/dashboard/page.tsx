@@ -1,8 +1,10 @@
 import { db } from '@/lib/db';
-import DashboardClient from './DashboardClient'; 
+import DashboardClient from './DashboardClient';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
+import { resolveBranchCode } from '@/lib/branchUtils';
+import { resolveStudentType, hasEnrollmentGift, giftNameForPackage } from '@/lib/studentUtils';
 
 export const dynamic = 'force-dynamic'; 
 
@@ -39,60 +41,18 @@ export default async function DashboardPage() {
     }
   });
 
-  const validBranches = [
-    'ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG', 
-    'ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'KW', 'TSG', 'HQ'
-  ];
-
-  const correctionMap: Record<string, string> = {
-    'PJ': 'PJY',
-    'KL': 'KLG',
-    'KUALA LUMPUR': 'KLG'
-  };
-
   // 3. Format Data with Business Logic
-  const formattedData: FormattedItem[] = rawData.flatMap((row: any) => {
-    let finalBranch = 'UNKNOWN';
-    const rawBranchCode = (row.branch_code || '').toUpperCase().trim();
+  const formattedData: FormattedItem[] = rawData.flatMap((row) => {
+    const finalBranch = resolveBranchCode(row.branch_code, row.doc_no);
 
-    if (validBranches.includes(rawBranchCode)) {
-      finalBranch = rawBranchCode;
-    } else if (correctionMap[rawBranchCode]) {
-      finalBranch = correctionMap[rawBranchCode];
-    } else if (row.doc_no) {
-      const parts = row.doc_no.toUpperCase().split(/[-_ ]+/); 
-      for (const part of parts) {
-        if (validBranches.includes(part)) {
-          finalBranch = part;
-          break;
-        }
-        if (correctionMap[part]) {
-          finalBranch = correctionMap[part];
-          break;
-        }
-      }
-    }
-
-    const recordDate = row.doc_date instanceof Date 
-      ? row.doc_date.toISOString().split('T')[0] 
+    const recordDate = row.doc_date instanceof Date
+      ? row.doc_date.toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0];
 
-    const isSkPrepared = row.sk_prep === true || row.sk_prep === 'true' || row.sk_prep === 1;
-    const isEgPrepared = row.eg_prep === true || row.eg_prep === 'true' || row.eg_prep === 1;
-
-    let sType = 'NEW';
-    const rawType = (row.type || '').trim().toUpperCase();
-    const rawPkg = (row.package || '').trim().toUpperCase();
-
-    if (rawType.includes('RENEWAL')) {
-      sType = 'RENEWAL';
-    } else if (rawType.includes('TRIAL')) {
-      sType = 'TRIAL';
-    } else {
-      sType = 'NEW'; 
-    }
-
-    const items = [];
+    const isSkPrepared = row.sk_prep === true;
+    const isEgPrepared = row.eg_prep === true;
+    const sType = resolveStudentType(row.type, row.package);
+    const items: FormattedItem[] = [];
 
     if (sType === 'NEW') {
       items.push({
@@ -101,26 +61,23 @@ export default async function DashboardPage() {
         total: 1,
         prepared: isSkPrepared ? 1 : 0,
         unprepared: isSkPrepared ? 0 : 1,
-        date: recordDate, 
-        studentType: sType 
+        date: recordDate,
+        studentType: sType,
       });
 
-      const is9M = /\b9\b/.test(rawPkg) || rawPkg.includes('9M');
-      const is12M = /\b12\b/.test(rawPkg) || rawPkg.includes('12M');
-
-      if (is9M || is12M) {
-        const giftName = is12M ? 'SMARTWATCH' : 'LEGO';
+      if (hasEnrollmentGift(row.package)) {
+        const giftName = giftNameForPackage(row.package) ?? 'EG';
         items.push({
           branch: finalBranch,
           itemType: `Enrollment Gift (EG) - ${giftName}`,
           total: 1,
           prepared: isEgPrepared ? 1 : 0,
           unprepared: isEgPrepared ? 0 : 1,
-          date: recordDate, 
-          studentType: sType 
+          date: recordDate,
+          studentType: sType,
         });
       }
-    } 
+    }
 
     return items;
   });

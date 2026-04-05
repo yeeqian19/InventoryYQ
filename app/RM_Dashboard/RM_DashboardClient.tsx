@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowLeft, Calendar, ChevronDown, Search, Users, UserSearch, Package, Gift, Layers, Globe } from 'lucide-react';
+import { ArrowLeft, Search, UserSearch, Package, Gift, Layers, Globe } from 'lucide-react';
 
 // --- NEW MASTER BRANCH CONFIGURATION ---
 type Region = 'A' | 'B' | 'C' | 'HQ';
@@ -58,28 +58,28 @@ type StudentData = {
   created_at?: string;
 };
 
+// Pure utility — defined outside component so it's stable across renders
+function toDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export default function RM_DashboardClient({ initialData }: { initialData: StudentData[] }) {
   const router = useRouter();
-  // Changed state from R2/R3 to A/B/C/ALL
   const [activeRegion, setActiveRegion] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
-  const [activeType, setActiveType] = useState<'ALL' | 'NEW' | 'RENEWAL' | 'TRIAL'>('NEW'); 
+  const [activeType, setActiveType] = useState<'ALL' | 'NEW' | 'RENEWAL' | 'TRIAL'>('NEW');
   const [itemToggle, setItemToggle] = useState<'ALL' | 'SK' | 'EG'>('ALL');
   const [expandedBranch, setExpandedBranch] = useState<string | null>(null);
   const [branchSearch, setBranchSearch] = useState('');
-  const [studentSearch, setStudentSearch] = useState(''); 
-  
+  const [studentSearch, setStudentSearch] = useState('');
+
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
-  const [rangeSelect, setRangeSelect] = useState('this-month'); 
+  const [rangeSelect, setRangeSelect] = useState('this-month');
 
-  const toDateString = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
-  const calculateDates = (range: string) => {
+  const calculateDates = useCallback((range: string) => {
     const now = new Date();
     let start = new Date();
     let end = new Date();
@@ -119,10 +119,12 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
     }
     setFromDate(toDateString(start));
     setToDate(toDateString(end));
-  };
+  }, [setFromDate, setToDate]);
 
+  // Initialize date range to current month on mount
   useEffect(() => {
     calculateDates('this-month');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const branchStats = useMemo(() => {
@@ -232,7 +234,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
               ].map(item => (
                 <button 
                   key={item.id}
-                  onClick={() => setItemToggle(item.id as any)}
+                  onClick={() => setItemToggle(item.id as 'ALL' | 'SK' | 'EG')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all ${itemToggle === item.id ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
                 >
                   {item.icon} <span className="hidden sm:inline">{item.label}</span>
@@ -265,7 +267,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
               {/* TYPE FILTER */}
               <div className="flex bg-slate-200 rounded-xl p-1">
                 {['ALL', 'NEW', 'RENEWAL', 'TRIAL'].map(t => (
-                  <button key={t} onClick={() => setActiveType(t as any)} className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all ${activeType === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>{t}</button>
+                  <button key={t} onClick={() => setActiveType(t as 'ALL' | 'NEW' | 'RENEWAL' | 'TRIAL')} className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all ${activeType === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>{t}</button>
                 ))}
               </div>
 
@@ -279,7 +281,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                 ].map(r => (
                   <button 
                     key={r.id} 
-                    onClick={() => setActiveRegion(r.id as any)} 
+                    onClick={() => setActiveRegion(r.id as 'ALL' | 'A' | 'B' | 'C')} 
                     className={`px-5 py-2 rounded-lg text-[10px] font-black transition-all flex items-center gap-2 ${activeRegion === r.id ? 'bg-emerald-500 text-white shadow-md scale-105' : 'text-slate-500 hover:text-white'}`}
                   >
                     {r.icon} {r.id === 'ALL' ? 'ALL' : `REG ${r.id}`}
@@ -369,7 +371,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             {row.list.length > 0 ? (
                                row.list.map(s => {
-                                 let isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
+                                 const isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
                                  return (
                                   <div key={s.student_id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-2 border-l-8" style={{ borderLeftColor: isPrepared ? '#10b981' : '#fb7185' }}>
                                     <span className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tighter">{s.name}</span>

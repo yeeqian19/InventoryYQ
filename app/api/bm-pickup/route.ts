@@ -2,22 +2,26 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { uploadToGoogleDrive } from '@/lib/googleDrive';
 import { generateEmailHTML } from '@/lib/emailTemplate';
-import { logScanAction } from '@/lib/logger'; // 👈 NEW: Imported your logger
-import nodemailer from 'nodemailer';
+import { logScanAction } from '@/lib/logger';
+import { transporter } from '@/lib/emailTransport';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import type { BmPickupRequestBody } from '@/types';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+interface UploadResult {
+  fileId: string;
+  webViewLink: string;
+}
 
-export async function POST(req: Request) {
+export async function POST(req: Request): Promise<NextResponse> {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    const { base64Data, barcode, branchCode } = await req.json();
+    const body = await req.json() as BmPickupRequestBody;
+    const { base64Data, barcode, branchCode } = body;
 
     if (!base64Data || !barcode) {
       return NextResponse.json(
@@ -27,7 +31,7 @@ export async function POST(req: Request) {
     }
 
     // Validate the record exists and is ready for BM Pickup
-    const record = await (db.inventory_distribution as any).findFirst({
+    const record = await db.inventory_distribution.findFirst({
       where: {
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },
@@ -47,16 +51,16 @@ export async function POST(req: Request) {
     const fileName = `BM-${branchCode || record.branch_code || 'BR'}-${barcode}-${Date.now()}.jpg`;
 
     // Step A: Upload photo to Google Drive
-    const { fileId, webViewLink } = await uploadToGoogleDrive(base64Data, fileName);
+    const { fileId, webViewLink }: UploadResult = await uploadToGoogleDrive(base64Data, fileName);
 
     // Step B: Update database with ATOMIC LOCK (fixes double email bug)
-    const updateResult = await (db.inventory_distribution as any).updateMany({
+    const updateResult = await db.inventory_distribution.updateMany({
       where: {
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },
           { barcode_eg: { equals: barcode, mode: 'insensitive' } },
         ],
-        bm_pickup: false, // 👈 THE LOCK: Only updates if it hasn't been picked up yet
+        bm_pickup: false,
       },
       data: {
         bm_pickup: true,
@@ -70,11 +74,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Item was just picked up by another request.' }, { status: 400 });
     }
 
-    // Step C: 🚨 RECORD THE SCAN IN THE AUDIT TRAIL LOG 🚨
+    // Step C: RECORD THE SCAN IN THE AUDIT TRAIL LOG
     await logScanAction({
-      docNo: record.doc_no || 'N/A', 
+      docNo: record.doc_no ?? null, 
       barcode: barcode,
-      studentName: record.student_name || 'Unknown',
+      studentName: record.student_name ?? 'Unknown',
       itemType: barcode.includes('-SK-') ? 'SK' : 'EG',
       branch: branchCode || record.branch_code || 'Unknown',
       actionType: 'PICKED UP',
@@ -104,7 +108,6 @@ export async function POST(req: Request) {
       to: process.env.NOTIFY_EMAIL,
       subject: `✅ BM Pick Up Confirmed – ${branchCode || record.branch_code} / ${barcode}`,
       html,
-      // 🚨 The heavy attachment array has been completely removed!
     });
 
     return NextResponse.json({
@@ -113,10 +116,11 @@ export async function POST(req: Request) {
       fileId,
       webViewLink,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
     console.error('BM Pickup API error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Internal Server Error' },
+      { error: message },
       { status: 500 }
     );
   }

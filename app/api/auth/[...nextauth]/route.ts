@@ -2,6 +2,7 @@ import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
 import { db } from '@/lib/db';
+import type { UserRole } from '@/types';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -30,15 +31,13 @@ export const authOptions: NextAuthOptions = {
           console.log("✅ USER FOUND! ROLE:", user.role);
 
           // 2. Password Check Logic
-          const isMaster = credentials.password === 'admin123';
-          
-          // Only check hash if there is a hash in the DB and it's NOT the master password
-          let isHashValid = false;
-          if (!isMaster && user.password_hash) {
-            isHashValid = await bcrypt.compare(credentials.password, user.password_hash);
+          if (!user.password_hash) {
+            console.log("❌ NO PASSWORD HASH ON RECORD");
+            return null;
           }
 
-          if (!isMaster && !isHashValid) {
+          const isHashValid = await bcrypt.compare(credentials.password, user.password_hash);
+          if (!isHashValid) {
             console.log("❌ PASSWORD MISMATCH");
             return null;
           }
@@ -50,8 +49,8 @@ export const authOptions: NextAuthOptions = {
             id: String(user.id),
             email: user.email,
             name: user.name || 'User',
-            role: user.role || 'BRANCH',
-            branch_name: user.branch_name || '',
+            role: (user.role || 'BRANCH') as UserRole,
+            branchCode: user.branch_name || '',
           };
         } catch (error) {
           console.error("🔥 DATABASE ERROR:", error);
@@ -63,15 +62,15 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role;
-        token.branch_name = (user as any).branch_name;
+        token.role = user.role;
+        token.branchCode = user.branchCode;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).branch_name = token.branch_name;
+        session.user.role = token.role;
+        session.user.branchCode = token.branchCode;
       }
       return session;
     },
