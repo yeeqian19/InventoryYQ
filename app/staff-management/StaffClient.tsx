@@ -15,11 +15,12 @@ type StaffMember = {
 
 const ROLE_BADGE: Record<string, string> = {
   SUPERADMIN: 'bg-violet-100 text-violet-700 border border-violet-200',
-  ADMIN:      'bg-emerald-100 text-emerald-700 border border-emerald-200',
-  BRANCH:     'bg-sky-100 text-sky-700 border border-sky-200',
+  ADMIN_HQ:   'bg-emerald-100 text-emerald-700 border border-emerald-200',
+  USER_RM:    'bg-amber-100 text-amber-700 border border-amber-200',
+  USER_BM:    'bg-sky-100 text-sky-700 border border-sky-200',
 };
 
-const emptyForm = { name: '', email: '', password: '', role: 'BRANCH', branchCode: '' };
+const emptyForm = { name: '', email: '', password: '', role: 'USER_BM', branchCode: '' };
 
 export default function StaffClient({ initialData }: { initialData: StaffMember[] }) {
   const router = useRouter();
@@ -164,8 +165,8 @@ export default function StaffClient({ initialData }: { initialData: StaffMember[
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Total Accounts',    value: initialData.length,                                                       color: 'text-slate-800' },
-            { label: 'Admins',            value: initialData.filter(s => s.role === 'ADMIN' || s.role === 'SUPERADMIN').length, color: 'text-violet-600' },
-            { label: 'Branch Managers',   value: initialData.filter(s => s.role === 'BRANCH').length,                     color: 'text-sky-600'    },
+            { label: 'Admins',            value: initialData.filter(s => s.role === 'ADMIN_HQ' || s.role === 'SUPERADMIN').length, color: 'text-violet-600' },
+            { label: 'Branch Managers',   value: initialData.filter(s => s.role === 'USER_BM').length,                        color: 'text-sky-600'    },
           ].map((stat) => (
             <div key={stat.label} className="bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-sm">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
@@ -328,13 +329,14 @@ export default function StaffClient({ initialData }: { initialData: StaffMember[
                   onChange={(e) => field('role', e.target.value)}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-violet-400/50 focus:border-violet-400 transition-all"
                 >
-                  <option value="BRANCH">Branch Manager</option>
-                  <option value="ADMIN">Admin</option>
+                  <option value="USER_BM">Branch Manager</option>
+                  <option value="USER_RM">Regional Manager</option>
+                  <option value="ADMIN_HQ">Admin HQ</option>
                   <option value="SUPERADMIN">Superadmin</option>
                 </select>
               </div>
 
-              {formData.role === 'BRANCH' && (
+              {formData.role === 'USER_BM' && (
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Branch Code</label>
                   <input

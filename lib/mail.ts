@@ -13,7 +13,8 @@ function buildWelcomeHTML(params: WelcomeEmailParams): string {
 
   const roleLabel =
     role === 'SUPERADMIN' ? 'Superadmin'
-    : role === 'ADMIN'    ? 'Admin'
+    : role === 'ADMIN_HQ' ? 'Admin HQ'
+    : role === 'USER_RM'  ? 'Regional Manager'
     : 'Branch Manager';
 
   const branchRow = branchCode
@@ -113,7 +114,8 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<void
 
   const roleLabel =
     role === 'SUPERADMIN' ? 'Superadmin'
-    : role === 'ADMIN'    ? 'Admin'
+    : role === 'ADMIN_HQ' ? 'Admin HQ'
+    : role === 'USER_RM'  ? 'Regional Manager'
     : 'Branch Manager';
 
   await transporter.sendMail({

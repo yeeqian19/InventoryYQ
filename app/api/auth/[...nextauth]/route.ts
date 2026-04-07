@@ -19,8 +19,8 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // 1. Fetch user from DB
-          const user = await db.users.findUnique({
-            where: { email: credentials.email.toLowerCase().trim() }, // Clean input
+          const user = await db.users.findFirst({
+            where: { email: { equals: credentials.email.trim(), mode: 'insensitive' } },
           });
 
           if (!user) {
@@ -36,7 +36,9 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          const isHashValid = await bcrypt.compare(credentials.password, user.password_hash);
+          // Normalize PHP-style $2y$ hashes to Node.js $2b$ format
+          const normalizedHash = user.password_hash.replace(/^\$2y\$/, '$2b$');
+          const isHashValid = await bcrypt.compare(credentials.password, normalizedHash);
           if (!isHashValid) {
             console.log("❌ PASSWORD MISMATCH");
             return null;
@@ -49,7 +51,7 @@ export const authOptions: NextAuthOptions = {
             id: String(user.id),
             email: user.email,
             name: user.name || 'User',
-            role: (user.role || 'BRANCH') as UserRole,
+            role: (user.role || 'USER_RM') as UserRole,
             branchCode: user.branch_name || '',
           };
         } catch (error) {

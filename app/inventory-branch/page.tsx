@@ -16,15 +16,14 @@ export default async function InventoryBranchPage() {
   const branchCode = session.user.branchCode || '';
 
   // Build the Prisma where clause based on role
+  // SUPERADMIN / ADMIN_HQ / USER_RM → see all branches (view-only)
+  // USER_BM → see only their assigned branch
   const roleFilter =
-    role === 'SUPERADMIN' || role === 'ADMIN'
-      ? { OR: [{ sk_prep: true }, { eg_prep: true }] }          // All branches
-      : { AND: [
-          { OR: [{ sk_prep: true }, { eg_prep: true }] },
-          { branch_code: branchCode },                           // Their branch only
-        ]};
+    role === 'SUPERADMIN' || role === 'ADMIN_HQ' || role === 'USER_RM'
+      ? { OR: [{ sk_prep: true }, { eg_prep: true }] }
+      : { branch_code: branchCode, OR: [{ sk_prep: true }, { eg_prep: true }] };
 
-  const rawData = await db.inventory_distribution.findMany({
+  const rawData = await db.inventory_distribution_new.findMany({
     select: {
       student_id:       true,
       student_name:     true,

@@ -8,8 +8,8 @@ import PhotoCapturePanel from '@/components/PhotoCapturePanel';
 export default function BmPickupClient() {
   const router = useRouter();
   
-  // State - Scanner initialized as open for high-speed mode
-  const [isCameraOpen, setIsCameraOpen] = useState(true);
+  // Scanner starts closed — user must press the button to grant camera permission
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanMessage, setScanMessage] = useState({ text: '', type: '' });
   

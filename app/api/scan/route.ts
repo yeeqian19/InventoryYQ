@@ -3,12 +3,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logScanAction } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { canEditHQ } from '@/lib/permissions';
+import { giftNameForPackage } from '@/lib/studentUtils';
 import type { ScanRequestBody, ScanResponse } from '@/types';
 
 export async function POST(request: NextRequest): Promise<NextResponse<ScanResponse | { error: string }>> {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Only SUPERADMIN and ADMIN_HQ can operate HQ scan stations
+  if (!canEditHQ(session.user.role)) {
+    return NextResponse.json({ error: 'Forbidden: HQ scan requires SUPERADMIN or ADMIN_HQ role.' }, { status: 403 });
   }
 
   try {
@@ -23,7 +30,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
     const stationNum = station || 1;
     const trimmedBarcode = barcode.trim().toUpperCase();
     
-    const record = await db.inventory_distribution.findFirst({
+    const record = await db.inventory_distribution_new.findFirst({
       where: {
         OR: [
           { barcode_sk: { contains: trimmedBarcode, mode: 'insensitive' } },
@@ -77,7 +84,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
     }
 
     // --- DATABASE UPDATE WITH ATOMIC LOCK ---
-    const updateResult = await db.inventory_distribution.updateMany({
+    const updateResult = await db.inventory_distribution_new.updateMany({
       where: { 
         student_id: record.student_id,
         ...lockCondition
@@ -88,6 +95,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
     // If count is 0, the lock blocked it (already scanned)
     if (updateResult.count === 0) {
       return NextResponse.json({ error: 'ALREADY SCANNED / PROCESSED', student_name: record.student_name ?? undefined }, { status: 400 });
+    }
+
+    // --- DEDUCT FROM STOCK INVENTORY (Station 1 only) ---
+    if (stationNum === 1 && updateResult.count > 0) {
+      if (isSKBarcode) {
+        // Deduct one packed starter kit
+        await db.starterKit.updateMany({
+          where: { id: 'default', packedCount: { gt: 0 } },
+          data: { packedCount: { decrement: 1 } },
+        });
+      } else {
+        // Deduct one unit of the matching enrollment gift
+        const giftName = giftNameForPackage(record.package);
+        if (giftName) {
+          await db.inventory.updateMany({
+            where: { name: { equals: giftName, mode: 'insensitive' }, isSkPart: false, currentCount: { gt: 0 } },
+            data: { currentCount: { decrement: 1 } },
+          });
+        }
+      }
     }
 
     // --- RECORD THE SCAN IN THE AUDIT TRAIL LOG ---

@@ -121,14 +121,18 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
 
   const processedInitialData = useMemo(() => {
     return initialData.flatMap((student) => {
-      if (student.name.includes(' & ')) {
-        const siblings = student.name.split(' & ').map((s) => s.trim());
+      const siblings = student.name
+        .split(/&|,|\band\b/i)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      if (siblings.length > 1) {
         return siblings.map((siblingName, index) => ({
           ...student,
-          student_id: `${student.student_id}-${index}`, 
+          student_id: `${student.student_id}-${index}`,
           name: siblingName,
-          skBarcode: student.skBarcode?.replace(student.name, siblingName) || '',
-          egBarcode: student.egBarcode?.replace(student.name, siblingName) || '',
+          skBarcode: student.skBarcode,
+          egBarcode: student.egBarcode,
         }));
       }
       return student;
@@ -202,9 +206,9 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
           @page { size: A4 portrait; margin: 10mm; }
           body { background: white !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
-          .print-label-container { display: grid !important; grid-template-columns: 1fr 1fr; width: 190mm; margin: 0 auto; gap: 5mm; padding: 0; box-sizing: border-box; justify-items: center; align-items: start; }
-          .print-label-container > div { page-break-inside: avoid; break-inside: avoid; }
-          .page-break { display: block !important; break-after: page; grid-column: 1 / -1; height: 0; margin: 0; padding: 0; }
+          .print-label-container { display: block !important; }
+          .print-page { display: grid !important; grid-template-columns: 1fr 1fr; width: 190mm; height: 257mm; margin: 0 auto; gap: 3mm; padding: 0; box-sizing: border-box; break-after: page; page-break-after: always; overflow: hidden; }
+          .print-label-item { height: 82mm; width: 90mm; break-inside: avoid; page-break-inside: avoid; box-sizing: border-box; overflow: hidden; }
         }
       `}</style>
 
@@ -253,6 +257,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
                   <option value="SNT">SNT (Senawang Taipan)</option>
                   <option value="SBN">SBN (Seremban)</option>
                   <option value="DP">DP (Dataran Puchong Utama)</option>
+                  <option value="ONL">ONL (Online / Others)</option>
                 </optgroup>
               </select>
             </div>
@@ -357,40 +362,44 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
       </div>
 
       <div className="hidden print-label-container">
-        {selectedStudentsForPrint.map((student, index) => {
-           const currentCode = activeSystem === 'SK' ? student.skBarcode : student.egBarcode;
-           let fontSize = 'text-4xl';
-           if (student.name.length > 25) fontSize = 'text-lg';
-           else if (student.name.length > 20) fontSize = 'text-xl';
-           else if (student.name.length > 15) fontSize = 'text-2xl';
-           else if (student.name.length > 10) fontSize = 'text-3xl';
-           
-           return (
-            <React.Fragment key={student.student_id}>
-              <div className="flex flex-col items-center justify-center w-full h-full max-w-[85mm] max-h-[85mm]">
-                <div className="border-[3px] border-[#0f172a] rounded-[2.5rem] w-full h-full flex flex-col items-center justify-between py-6 px-4 bg-white shadow-none" style={{ pageBreakInside: 'avoid' }}>
-                  <div className="flex flex-col items-center justify-start w-full">
-                    <div className="bg-white w-full flex justify-center items-center mb-1">
-                      <Barcode value={getSafeBarcodeValue(currentCode)} width={1.5} height={45} displayValue={false} margin={0} />
+        {Array.from({ length: Math.ceil(selectedStudentsForPrint.length / 6) }).map((_, pageIndex) => {
+          const pageStudents = selectedStudentsForPrint.slice(pageIndex * 6, pageIndex * 6 + 6);
+          return (
+            <div key={pageIndex} className="print-page">
+              {pageStudents.map((student) => {
+                const currentCode = activeSystem === 'SK' ? student.skBarcode : student.egBarcode;
+                let fontSize = 'text-4xl';
+                if (student.name.length > 25) fontSize = 'text-lg';
+                else if (student.name.length > 20) fontSize = 'text-xl';
+                else if (student.name.length > 15) fontSize = 'text-2xl';
+                else if (student.name.length > 10) fontSize = 'text-3xl';
+
+                return (
+                  <div key={student.student_id} className="print-label-item flex flex-col items-center justify-center">
+                    <div className="border-[3px] border-[#0f172a] rounded-[2.5rem] w-full h-full flex flex-col items-center justify-between py-6 px-4 bg-white">
+                      <div className="flex flex-col items-center justify-start w-full">
+                        <div className="bg-white w-full flex justify-center items-center mb-1">
+                          <Barcode value={getSafeBarcodeValue(currentCode)} width={1.5} height={45} displayValue={false} margin={0} />
+                        </div>
+                        <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{activeSystem} BARCODE</p>
+                        <p className="text-[9px] font-black text-slate-800 tracking-wider">{currentCode}</p>
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mt-1">{student.branch} BRANCH</p>
+                      </div>
+                      <div className="flex flex-col items-center justify-center flex-1 w-full px-1 text-center py-2">
+                        <h2 className={`${fontSize} font-black text-slate-900 uppercase leading-tight tracking-tight break-words line-clamp-3 w-full`}>{student.name}</h2>
+                      </div>
+                      <div className="flex flex-col items-center justify-end">
+                        <div className="p-2 bg-white border-[2px] border-slate-100 rounded-xl mb-1.5">
+                          <QRCodeSVG value={currentCode || ''} size={70} level="H" />
+                        </div>
+                        <p className="text-[8px] font-black text-slate-800 uppercase tracking-widest text-center leading-tight">SCAN TO<br/>HANDOVER</p>
+                      </div>
                     </div>
-                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{activeSystem} BARCODE</p>
-                    <p className="text-[9px] font-black text-slate-800 tracking-wider">{currentCode}</p>
-                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] mt-1">{student.branch} BRANCH</p>
                   </div>
-                  <div className="flex flex-col items-center justify-center flex-1 w-full px-1 text-center py-2">
-                    <h2 className={`${fontSize} font-black text-slate-900 uppercase leading-tight tracking-tight break-words line-clamp-3 w-full`}>{student.name}</h2>
-                  </div>
-                  <div className="flex flex-col items-center justify-end">
-                    <div className="p-2 bg-white border-[2px] border-slate-100 rounded-xl mb-1.5">
-                      <QRCodeSVG value={currentCode || ''} size={70} level="H" />
-                    </div>
-                    <p className="text-[8px] font-black text-slate-800 uppercase tracking-widest text-center leading-tight">SCAN TO<br/>HANDOVER</p>
-                  </div>
-                </div>
-              </div>
-              {(index + 1) % 6 === 0 && index < selectedStudentsForPrint.length - 1 && <div className="page-break" />}
-            </React.Fragment>
-           );
+                );
+              })}
+            </div>
+          );
         })}
       </div>
     </div>

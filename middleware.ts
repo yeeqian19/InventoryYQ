@@ -1,43 +1,38 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
+import type { UserRole } from '@/types';
 
 export async function middleware(req: NextRequest) {
   const token = await getToken({ req });
   const { pathname } = req.nextUrl;
 
   // ── 1. Unauthenticated users ──────────────────────────────────────────────
-  // The root page (/) handles its own login UI via LoginClient, so let it through.
-  // Everything else that requires auth gets bounced to /.
   if (!token) {
     if (pathname === '/') return NextResponse.next();
     return NextResponse.redirect(new URL('/', req.url));
   }
 
   // ── 2. Authenticated users ────────────────────────────────────────────────
-  const role = token.role as string;
+  const role = token.role as UserRole;
 
-  // BRANCH: can only access the root control panel and their own inventory section
-  if (role === 'BRANCH') {
-    const allowed =
-      pathname === '/' ||
-      pathname.startsWith('/inventory-branch');
-    if (!allowed) {
-      return NextResponse.redirect(new URL('/', req.url));
-    }
-  }
-
-  // ADMIN: cannot access staff management or the branch terminal
-  if (role === 'ADMIN') {
+  if (role === 'USER_BM') {
+    const allowed = pathname === '/' || pathname.startsWith('/inventory-branch');
+    if (!allowed) return NextResponse.redirect(new URL('/inventory-branch', req.url));
+  } else if (role === 'USER_RM') {
     const blocked =
       pathname.startsWith('/staff-management') ||
-      pathname.startsWith('/inventory-branch');
-    if (blocked) {
-      return NextResponse.redirect(new URL('/', req.url));
-    }
+      pathname.startsWith('/stock-management') ||
+      pathname.startsWith('/scan-approve') ||
+      pathname.startsWith('/bm-pickup');
+    if (blocked) return NextResponse.redirect(new URL('/', req.url));
+  } else if (role === 'ADMIN_HQ') {
+    const blocked =
+      pathname.startsWith('/staff-management') ||
+      pathname.startsWith('/RM_Dashboard');
+    if (blocked) return NextResponse.redirect(new URL('/', req.url));
   }
-
-  // SUPERADMIN: full access — no extra rules needed
+  // SUPERADMIN: full access
 
   return NextResponse.next();
 }

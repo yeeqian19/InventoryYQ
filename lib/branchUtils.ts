@@ -4,8 +4,14 @@
  */
 
 export const VALID_BRANCHES = [
-  'ST', 'SA', 'PJY', 'AMP', 'CJY', 'KLG', 'BBB', 'SHA', 'RBY', 'KTG',
-  'ONL', 'SP', 'KD', 'DA', 'DK', 'BTHO', 'EGR', 'BSP', 'KW', 'TSG', 'HQ',
+  // Region A
+  'AC', 'DA', 'EGR', 'KLG', 'RBY', 'SA', 'SBY', 'SHA', 'ST',
+  // Region B
+  'AMP', 'BTHO', 'DK', 'DSH', 'KD', 'KTG', 'SLY', 'SP', 'TSG',
+  // Region C
+  'BBB', 'BSP', 'CJY', 'DP', 'KW', 'ONL', 'PJY', 'SBN', 'SNT',
+  // Other
+  'HQ',
 ];
 
 export const BRANCH_CORRECTION_MAP: Record<string, string> = {

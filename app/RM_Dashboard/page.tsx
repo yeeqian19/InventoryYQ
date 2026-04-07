@@ -1,12 +1,16 @@
-import prisma from '@/lib/db'; 
+import prisma from '@/lib/db';
 import RM_DashboardClient from './RM_DashboardClient';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { redirect } from 'next/navigation';
+import { resolveBranchCode } from '@/lib/branchUtils';
 
 // 1. FORCE FRESH DATA
-export const revalidate = 0; 
+export const revalidate = 0;
 
 // Helper function to fetch and transform data
 async function fetchDashboardData() {
-  const data = await prisma.inventory_distribution.findMany({
+  const data = await prisma.inventory_distribution_new.findMany({
     select: {
       student_id: true,
       student_name: true,
@@ -56,7 +60,7 @@ async function fetchDashboardData() {
     return {
       student_id: item.student_id.toString(),
       name: cleanName, 
-      branch: item.branch_code || 'Unknown',
+      branch: resolveBranchCode(item.branch_code, item.doc_no),
       sk_prep: !!item.sk_prep,
       eg_prep: !!item.eg_prep,
       bm_pickup: !!item.bm_pickup,
@@ -72,6 +76,10 @@ async function fetchDashboardData() {
 }
 
 export default async function RMDashboardPage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect('/');
+  if (session.user.role === 'ADMIN_HQ') redirect('/');
+
   let serializedData;
   let error: Error | null = null;
   

@@ -38,7 +38,7 @@ export async function POST(req: Request): Promise<NextResponse<BranchScanRespons
       return NextResponse.json({ error: 'Invalid mode.' }, { status: 400 });
     }
 
-    const record = await db.inventory_distribution.findFirst({
+    const record = await db.inventory_distribution_new.findFirst({
       where: {
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },
@@ -73,7 +73,7 @@ export async function POST(req: Request): Promise<NextResponse<BranchScanRespons
         return NextResponse.json({ error: 'Already Picked Up by Branch.' }, { status: 400 });
       }
 
-      const updated = await db.inventory_distribution.update({
+      const updated = await db.inventory_distribution_new.update({
         where: { student_id: record.student_id },
         data: { bm_pickup: true, bm_pickup_date: new Date() }
       });
@@ -89,7 +89,7 @@ export async function POST(req: Request): Promise<NextResponse<BranchScanRespons
     }
 
     // Skip photo upload and save to DB for now
-    const updated = await db.inventory_distribution.update({
+    const updated = await db.inventory_distribution_new.update({
       where: { student_id: record.student_id },
       data: {
         student_received: true,

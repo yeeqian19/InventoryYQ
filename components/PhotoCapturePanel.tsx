@@ -168,7 +168,9 @@ export default function PhotoCapturePanel({
                 <img
                   src={exampleImage}
                   alt={exampleCaption}
-                  className="w-full object-cover max-h-40 group-hover:opacity-90 transition-opacity"
+                  width={400}
+                  height={160}
+                  className="w-full h-40 object-cover group-hover:opacity-90 transition-opacity"
                 />
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider text-center py-1.5 group-hover:text-blue-500 transition-colors">
                   🔍 Tap to view full size
