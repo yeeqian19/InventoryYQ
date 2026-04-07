@@ -7,7 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
-model inventory_distribution {
+model inventory_distribution_new {
   student_id            Int       @id @default(autoincrement())
   doc_no                String?   @db.VarChar(255)
   doc_date              DateTime? @db.Timestamp(6)
@@ -21,16 +21,13 @@ model inventory_distribution {
   eg_prep_date          DateTime? @db.Timestamp(6)
   bm_pickup             Boolean?  @default(false)
   bm_pickup_date        DateTime? @db.Timestamp(6)
-  bm_pickup_photo       String?   // Google Drive link for BM Pickup photo proof
   student_received      Boolean?  @default(false)
   student_received_date DateTime? @db.Timestamp(6)
   barcode_sk            String?   @default(dbgenerated("(((branch_code)::text || '-SK-'::text) || lpad((student_id)::text, 6, '0'::text))")) @db.VarChar
   remark                String?   @db.VarChar(255)
-  
-  // ✅ NEW COLUMN ADDED HERE
-  proof_photo           String?   
-
   barcode_eg            String?   @default(dbgenerated("\nCASE\n    WHEN (((package)::text ~~* '9M%'::text) OR ((package)::text ~~* '12M%'::text)) THEN (((branch_code)::text || '-EG-'::text) || lpad((student_id)::text, 6, '0'::text))\n    ELSE NULL::text\nEND")) @db.VarChar(255)
+  proof_photo           String?
+  bm_pickup_photo       String?
 
   @@unique([doc_no, student_name])
 }
@@ -40,34 +37,53 @@ model users {
   id            Int       @id @default(autoincrement())
   email         String    @unique @db.VarChar(255)
   password_hash String
-  role          String    @db.VarChar(20)
+  role          Role      @default(USER_RM)
   branch_name   String?   @db.VarChar(100)
   created_at    DateTime? @default(now()) @db.Timestamptz(6)
   name          String?
+  branchId      String?   @db.VarChar(100)
 }
 
 model ScanLog {
   id           String   @id @default(uuid())
   timestamp    DateTime @default(now())
-  doc_no       String?  // Optional, like 'INV-1001'
+  doc_no       String?
   barcode      String
   student_name String
-  item_type    String   // 'SK' or 'EG'
+  item_type    String
   branch       String
-  action_type  String   // 'PREPARED', 'PICKED UP', 'RECEIVED'
-  processed_by String   // e.g., 'Ashwin (HQ)' or 'Siti (BM)'
+  action_type  String
+  processed_by String
 
   @@map("scan_log")
 }
 
 model Inventory {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  count       Int      @default(0)
-  threshold   Int      @default(10)
-  link        String?  @db.Text      // Optional supplier link
-  isKitItem   Boolean  @default(false) // True for Ball/Bag/Bottle, False for EG
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  currentCount Int      @default(0)
+  threshold    Int      @default(0)
+  link         String?
+  isSkPart     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  inCartCount  Int      @default(0)
+  orderedCount Int      @default(0)
+  category     String   @default("SK_ITEM")
+  neededCount  Int      @default(0)
+}
+
+model StarterKit {
+  id            String  @id @default(cuid())
+  packedCount   Int     @default(0)
+  branchId      String?
+  namedCount    Int     @default(0)
+  unnamedCount  Int     @default(0)
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN_HQ
+  USER_RM
+  USER_BM
 }

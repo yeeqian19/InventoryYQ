@@ -3,7 +3,8 @@
 // ============================================
 
 // --- User & Auth Types ---
-export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'BRANCH';
+export type UserRole = 'SUPERADMIN' | 'ADMIN_HQ' | 'USER_RM' | 'USER_BM';
+export const ALL_ROLES: UserRole[] = ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM', 'USER_BM'];
 
 export interface SessionUser {
   id: string;

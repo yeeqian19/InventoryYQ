@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   }
 
   // 2. Fetch Data from Database
-  const rawData = await db.inventory_distribution.findMany({
+  const rawData = await db.inventory_distribution_new.findMany({
     select: {
       student_id: true,
       doc_no: true,

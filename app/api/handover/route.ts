@@ -28,7 +28,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
 
     // 1. Initial Check: Find the record to validate and get data for the logger
-    const record = await db.inventory_distribution.findFirst({
+    const record = await db.inventory_distribution_new.findFirst({
       where: {
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },
@@ -51,7 +51,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     const { fileId, webViewLink }: UploadResult = await uploadToGoogleDrive(base64Data, fileName);
 
     // Step B: Update database with ATOMIC LOCK (fixes double email bug)
-    const updateResult = await db.inventory_distribution.updateMany({
+    const updateResult = await db.inventory_distribution_new.updateMany({
       where: {
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },

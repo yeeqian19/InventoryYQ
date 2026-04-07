@@ -40,6 +40,8 @@ const BRANCH_LIST: Branch[] = [
   { code: 'SBN', name: 'Seremban', region: 'C' },
   { code: 'DP',  name: 'Dataran Puchong Utama', region: 'C' },
   { code: 'ONL', name: 'Online / Others', region: 'C' },
+  // HQ / unassigned
+  { code: 'HQ', name: 'HQ', region: 'HQ' },
 ];
 
 type StudentData = {

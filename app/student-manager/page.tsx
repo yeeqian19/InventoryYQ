@@ -6,7 +6,7 @@ import { resolveStudentType } from '@/lib/studentUtils';
 export const dynamic = 'force-dynamic';
 
 export default async function StudentManagerPage() {
-  const rawStudents = await db.inventory_distribution.findMany({
+  const rawStudents = await db.inventory_distribution_new.findMany({
     select: {
       student_id: true,
       student_name: true,
@@ -23,47 +23,33 @@ export default async function StudentManagerPage() {
     },
   });
 
-  const tableData = rawStudents.flatMap((student) => {
+  const tableData = rawStudents.map((student) => {
     const finalBranch = resolveBranchCode(student.branch_code, student.doc_no);
     const sType = resolveStudentType(student.type, student.package);
-
-    // --- THE SPLITTER LOGIC ---
-    const rawName = student.student_name || 'Unknown';
-    // Split the name if it contains "&", "and", or ","
-    const individualNames = rawName.split(/&|,|\band\b/i).map(n => n.trim()).filter(n => n.length > 0);
-    
-    if (individualNames.length === 0) individualNames.push('Unknown');
     const hasEG = student.barcode_eg && student.barcode_eg.trim() !== '';
 
-    // Create a unique row for each separated name
-    return individualNames.map((name, index) => {
-      // Because we generate barcodes automatically in the DB now, 
-      // we just pull the DB barcode directly (unless you want this frontend override!)
-      // I am keeping your frontend override intact here just in case you prefer it.
-      const skBarcode = student.barcode_sk || `${finalBranch}-SK-${name}`;
-      const egBarcode = hasEG ? (student.barcode_eg || `${finalBranch}-EG-${name}`) : 'N/A';
+    const skBarcode = student.barcode_sk || `${finalBranch}-SK-${student.student_id}`;
+    const egBarcode = hasEG ? (student.barcode_eg || '') : 'N/A';
 
-      // Safely handle the date object
-      let formattedDate = '';
-      if (student.doc_date) {
-          try {
-              formattedDate = new Date(student.doc_date).toISOString().split('T')[0];
-          } catch {
-              formattedDate = '';
-          }
+    let formattedDate = '';
+    if (student.doc_date) {
+      try {
+        formattedDate = new Date(student.doc_date).toISOString().split('T')[0];
+      } catch {
+        formattedDate = '';
       }
+    }
 
-      return {
-        student_id: `${student.student_id}-${index}`,
-        name: name,
-        branch: finalBranch,
-        skBarcode: skBarcode,
-        egBarcode: egBarcode,
-        date: formattedDate,
-        studentType: sType,
-        package: student.package || null, 
-      };
-    });
+    return {
+      student_id: String(student.student_id),
+      name: student.student_name || 'Unknown',
+      branch: finalBranch,
+      skBarcode,
+      egBarcode,
+      date: formattedDate,
+      studentType: sType,
+      package: student.package || null,
+    };
   });
 
   return <StudentManagerClient initialData={tableData} />;

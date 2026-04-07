@@ -66,7 +66,8 @@ type Props = {
 
 export default function BranchDashboardClient({ initialData, userRole, userBranchCode }: Props) {
   const router = useRouter();
-  const isBranchManager = userRole === 'BRANCH';
+  const isBranchManager = userRole === 'USER_BM';
+  const isViewOnly = userRole === 'ADMIN_HQ' || userRole === 'USER_RM';
 
   // Sort branches alphabetically for the dropdown
   const SORTED_BRANCHES = useMemo(() => {
@@ -81,8 +82,8 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
   const [activeBranch, setActiveBranch] = useState(defaultBranch);
   const [activeMode, setActiveMode] = useState<'PICKUP' | 'HANDOVER' | 'HISTORY'>('PICKUP');
 
-  // Camera & Scan State - Scanner initialized as open for high-speed mode
-  const [isCameraOpen, setIsCameraOpen] = useState(true);
+  // Scanner starts closed — user must press the button to grant camera permission
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanMessage, setScanMessage] = useState({ text: '', type: '' });
 
@@ -379,7 +380,15 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
                 </div>
               )}
 
-              {isCameraOpen ? (
+              {isViewOnly ? (
+                <div className="flex flex-col items-center p-8 text-center mt-6">
+                  <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 bg-slate-100 text-slate-400">
+                    <span className="text-4xl">🔒</span>
+                  </div>
+                  <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-2">View Only</h3>
+                  <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No actions available for your role</p>
+                </div>
+              ) : isCameraOpen ? (
                 <div className="w-full h-full absolute inset-0 pt-8 bg-black flex flex-col items-center justify-center z-10">
                   <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl relative">
                     <Scanner onScan={(r) => { if (r?.[0]) processScan(r[0].rawValue); }} components={{ finder: false }} />

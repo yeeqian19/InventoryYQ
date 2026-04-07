@@ -8,94 +8,46 @@ import LogoutButton from "@/components/LogoutButton";
 export default async function RootPage() {
   const session = await getServerSession(authOptions);
 
-  // Not logged in → show login page
   if (!session) {
     return <LoginClient />;
   }
 
-  // Get user info from session
-  const role = session?.user?.role || "BRANCH";
+  const role = session?.user?.role || "USER_RM";
   const userName = session?.user?.name || "User";
 
-  // RBAC Menu Logic
   const allMenuItems = [
-    { 
-      name: 'MY INVENTORY HQ', 
-      icon: '🏢', 
-      color: '#418bca', 
-      href: '/dashboard', 
-      roles: ['SUPERADMIN', 'ADMIN'] 
-    },
-    {
-      name: 'RM DASHBOARD',
-      icon: '📊',
-      color: '#00c0ef',
-      href: '/RM_Dashboard',
-      roles: ['SUPERADMIN']
-    },
-    { 
-      name: 'MY INVENTORY BRANCH', 
-      icon: '📍', 
-      color: '#00a65a', 
-      href: '/inventory-branch', 
-      roles: ['SUPERADMIN', 'BRANCH'] 
-    },
-    { 
-      name: 'STOCK MANAGEMENT', 
-      icon: '📦', 
-      color: '#605ca8', 
-      href: '/stock-management', 
-      roles: ['SUPERADMIN', 'ADMIN'] 
-    },
-    { 
-      name: 'STAFF MANAGEMENT', 
-      icon: '👥', 
-      color: '#1e293b', // Dark slate color to separate it as a system setting
-      href: '/staff-management', 
-      roles: ['SUPERADMIN'] // ONLY Superadmins can see this button
-    },
+    { name: 'MY INVENTORY HQ',     icon: '🏢', color: 'bg-[#418bca]', href: '/dashboard',        roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
+    { name: 'RM DASHBOARD',        icon: '📊', color: 'bg-[#00c0ef]', href: '/RM_Dashboard',      roles: ['SUPERADMIN', 'USER_RM'] },
+    { name: 'MY INVENTORY BRANCH', icon: '📍', color: 'bg-[#00a65a]', href: '/inventory-branch',  roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM', 'USER_BM'] },
+    { name: 'STOCK MANAGEMENT',    icon: '📦', color: 'bg-[#605ca8]', href: '/stock-management',  roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+    { name: 'STAFF MANAGEMENT',    icon: '👥', color: 'bg-[#1e293b]', href: '/staff-management',  roles: ['SUPERADMIN'] },
   ];
 
   const visibleItems = allMenuItems.filter(item => item.roles.includes(role));
 
   return (
-    <div style={{ backgroundColor: '#f3f7f9', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ backgroundColor: 'white', borderRadius: '50px', boxShadow: '0 15px 40px rgba(0,0,0,0.08)', padding: '60px 40px', maxWidth: '900px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div className="min-h-screen bg-[#f3f7f9] flex items-center justify-center p-4 font-sans">
+      <div className="bg-white rounded-[40px] shadow-[0_15px_40px_rgba(0,0,0,0.08)] px-6 py-10 sm:px-10 sm:py-14 w-full max-w-3xl flex flex-col items-center">
 
         {/* ROLE BADGE */}
-        <div style={{ border: '2px solid #2563eb', color: '#2563eb', borderRadius: '50px', padding: '4px 20px', fontSize: '11px', fontWeight: '900', letterSpacing: '2px', marginBottom: '25px', textTransform: 'uppercase' }}>
+        <div className="border-2 border-blue-600 text-blue-600 rounded-full px-5 py-1 text-[11px] font-black tracking-[2px] uppercase mb-6">
           {role} PORTAL
         </div>
 
-        <h1 style={{ fontSize: '36px', fontWeight: '700', color: '#1e293b', marginBottom: '8px', textAlign: 'center', letterSpacing: '-0.02em' }}>
+        <h1 className="text-2xl sm:text-4xl font-bold text-slate-800 mb-2 text-center tracking-tight">
           Inventory Control Panel
         </h1>
-        <p style={{ fontSize: '18px', color: '#94a3b8', marginBottom: '50px', textAlign: 'center' }}>
+        <p className="text-base sm:text-lg text-slate-400 mb-10 text-center">
           Welcome back, {userName}
         </p>
 
-        {/* GRID OF CARDS */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px', marginBottom: '40px' }}>
+        {/* RESPONSIVE GRID — 2 cols on phone, 3 on tablet+ */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full mb-8">
           {visibleItems.map((item) => (
-            <Link href={item.href} key={item.href} style={{ textDecoration: 'none' }}>
-              <div
-                className="menu-card"
-                style={{
-                  backgroundColor: item.color,
-                  width: '200px',
-                  height: '200px',
-                  borderRadius: '35px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  boxShadow: '0 8px 15px rgba(0,0,0,0.1)',
-                  cursor: 'pointer'
-                }}
-              >
-                <span style={{ fontSize: '65px', marginBottom: '15px' }}>{item.icon}</span>
-                <span style={{ fontSize: '10px', fontWeight: '900', textAlign: 'center', padding: '0 15px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <Link href={item.href} key={item.href} className="no-underline">
+              <div className={`${item.color} rounded-3xl flex flex-col items-center justify-center text-white shadow-md cursor-pointer transition-transform active:scale-95 hover:scale-105 min-h-[140px] sm:min-h-[180px] p-4`}>
+                <span className="text-5xl sm:text-6xl mb-3">{item.icon}</span>
+                <span className="text-[10px] sm:text-[11px] font-black text-center uppercase tracking-wide leading-tight px-1">
                   {item.name}
                 </span>
               </div>

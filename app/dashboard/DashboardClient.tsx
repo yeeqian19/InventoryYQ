@@ -43,6 +43,8 @@ const BRANCH_MASTER_LIST: Branch[] = [
   { code: 'SBN', name: 'Seremban', region: 'C' },
   { code: 'DP',  name: 'Dataran Puchong Utama', region: 'C' },
   { code: 'ONL', name: 'Online / Others', region: 'C' },
+  // HQ records (e.g. internal / unassigned branch)
+  { code: 'HQ', name: 'HQ', region: 'HQ' },
 ];
 
 type InventoryItem = {
@@ -292,18 +294,26 @@ export default function DashboardClient({
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center relative">
-            <h3 className="text-sm font-black text-slate-800 mb-2 w-full text-left absolute top-10 left-10 uppercase tracking-widest">Success Rate</h3>
-            <div className="h-64 w-full relative flex items-center justify-center">
+          <div className="bg-white p-6 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center relative">
+            <h3 className="text-sm font-black text-slate-800 w-full text-left uppercase tracking-widest mb-4">Success Rate</h3>
+            {/* aspect-square ensures the chart is always a perfect circle regardless of screen width */}
+            <div className="w-full aspect-square max-w-[220px] relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={[{v: totalPrepared}, {v: totalUnprepared}]} innerRadius={75} outerRadius={100} paddingAngle={10} dataKey="v" stroke="none">
+                  <Pie
+                    data={[{v: totalPrepared}, {v: totalUnprepared}]}
+                    innerRadius="60%"
+                    outerRadius="80%"
+                    paddingAngle={10}
+                    dataKey="v"
+                    stroke="none"
+                  >
                     <Cell fill={COLORS.prepared} /><Cell fill={COLORS.unprepared} />
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-              <div className="absolute text-center">
-                <p className="text-5xl font-black text-slate-900 tracking-tighter italic">{completionRate}%</p>
+              <div className="absolute text-center pointer-events-none">
+                <p className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tighter italic">{completionRate}%</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ready</p>
               </div>
             </div>

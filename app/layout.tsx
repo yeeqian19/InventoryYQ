@@ -25,7 +25,9 @@ export default function RootLayout({
   // 🚨 FIXED ERROR: We now use ONE <html> tag to prevent Next.js hydration crashes
   return (
     <html lang="en">
-      {/* 👈 FIXED: Moved overflow-x-hidden directly to the body tag so mobile browsers don't freeze! */}
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+      </head>
       <body className={isSpecialPage ? "bg-white min-h-screen overflow-x-hidden" : "bg-[#f8fafc] min-h-screen overflow-x-hidden"}>
         <Providers> 
           

@@ -6,10 +6,10 @@ import { useSession } from 'next-auth/react';
 import { useState } from 'react'; 
 
 const allNavItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: '📦', roles: ['SUPERADMIN', 'ADMIN'] },
-  { name: 'Student Manager', href: '/student-manager', icon: '👥', roles: ['SUPERADMIN', 'ADMIN'] },
-  { name: 'Scan & Approve', href: '/scan-approve', icon: '📷', roles: ['SUPERADMIN', 'ADMIN', 'BRANCH'] },
-  { name: 'Scan Log', href: '/scan-log', icon: '📋', roles: ['SUPERADMIN', 'ADMIN', 'BRANCH'] },
+  { name: 'Dashboard', href: '/dashboard', icon: '📦', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
+  { name: 'Student Manager', href: '/student-manager', icon: '👥', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Scan & Approve', href: '/scan-approve', icon: '📷', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Scan Log', href: '/scan-log', icon: '📋', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
 ];
 
 export default function Sidebar() {
@@ -17,7 +17,7 @@ export default function Sidebar() {
   const lowerPath = pathname.toLowerCase();
   
   const { data: session } = useSession();
-  const userRole = session?.user?.role || 'BRANCH';
+  const userRole = session?.user?.role || 'USER_RM';
   const userName = session?.user?.name || session?.user?.email?.split('@')[0] || 'User';
 
   // 👈 Mobile Menu State
@@ -70,7 +70,7 @@ export default function Sidebar() {
             My Inventory
           </h1>
           <p className="text-[10px] font-bold opacity-50 tracking-[0.2em] mt-2 border-t border-white/20 pt-2 uppercase">
-            {userRole === 'BRANCH' ? 'BRANCH TERMINAL' : 'CENTRAL ADMINISTRATION'}
+            {userRole === 'USER_BM' ? 'BRANCH TERMINAL' : 'CENTRAL ADMINISTRATION'}
           </p>
         </div>
 

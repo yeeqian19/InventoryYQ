@@ -33,7 +33,7 @@ export default function LoginClient() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0f172a] p-4">
-      <div className="w-full max-w-md rounded-2xl bg-[#1e293b] p-10 shadow-2xl border border-slate-800">
+      <div className="w-full max-w-md rounded-2xl bg-[#1e293b] p-8 shadow-2xl border border-slate-800">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold text-white tracking-tight">MY INVENTORY</h1>
           <p className="mt-2 text-sm text-slate-400">Sign in to your account</p>
@@ -45,44 +45,41 @@ export default function LoginClient() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-3">
+            {/* text-[16px] prevents iOS Safari auto-zoom; h-12 = 48px touch target */}
             <input
               type="email"
               placeholder="Email"
               required
-              className="w-full rounded-lg border border-slate-700 bg-[#0f172a] px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-all"
+              className="w-full h-12 rounded-xl border border-slate-700 bg-[#0f172a] px-4 text-[16px] text-white focus:border-emerald-500 focus:outline-none transition-all"
               onChange={(e) => setEmail(e.target.value)}
             />
-            
-            {/* Password Container */}
+
             <div className="relative">
               <input
-                type={showPassword ? "text" : "password"} // 🟢 Toggle type
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 required
-                className="w-full rounded-lg border border-slate-700 bg-[#0f172a] px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-all"
+                className="w-full h-12 rounded-xl border border-slate-700 bg-[#0f172a] px-4 pr-20 text-[16px] text-white focus:border-emerald-500 focus:outline-none transition-all"
                 onChange={(e) => setPassword(e.target.value)}
               />
-              {/* Show/Hide Button */}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-400 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-400 transition-colors min-h-[44px] px-1"
               >
-                {showPassword ? (
-                  <span className="text-sm font-bold uppercase tracking-tighter">Hide</span>
-                ) : (
-                  <span className="text-sm font-bold uppercase tracking-tighter">Show</span>
-                )}
+                <span className="text-sm font-bold uppercase tracking-tighter">
+                  {showPassword ? 'Hide' : 'Show'}
+                </span>
               </button>
             </div>
           </div>
-          
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-emerald-600 py-3 font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all shadow-lg shadow-emerald-900/20"
+            className="w-full h-12 rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all shadow-lg shadow-emerald-900/20 text-[16px]"
           >
             {loading ? "AUTHENTICATING..." : "SIGN IN"}
           </button>
