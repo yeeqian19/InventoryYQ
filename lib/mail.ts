@@ -1,4 +1,4 @@
-import { transporter } from './emailTransport';
+import { resend } from './emailTransport';
 
 type WelcomeEmailParams = {
   name: string;
@@ -118,8 +118,8 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<void
     : role === 'USER_RM'  ? 'Regional Manager'
     : 'Branch Manager';
 
-  await transporter.sendMail({
-    from: `"My Inventory System" <${process.env.SMTP_USER}>`,
+  await resend.emails.send({
+    from: 'My Inventory System <onboarding@resend.dev>',
     to: email,
     subject: `Welcome to My Inventory — Your ${roleLabel} Account is Ready`,
     html: buildWelcomeHTML(params),
