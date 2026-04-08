@@ -33,7 +33,9 @@ export default function Sidebar() {
     lowerPath === '/login' ||
     lowerPath.includes('rm_dashboard') ||
     lowerPath.includes('inventory-branch') ||
-    lowerPath.includes('bm-pickup');
+    lowerPath.includes('bm-pickup') ||
+    lowerPath.includes('dashboard') ||
+    lowerPath.includes('stock-management');
 
   if (shouldHide) return null;
 

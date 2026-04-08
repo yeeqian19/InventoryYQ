@@ -1,4 +1,5 @@
-import { resend } from './emailTransport';
+import { sendEmail } from './emailTransport';
+
 
 type WelcomeEmailParams = {
   name: string;
@@ -78,7 +79,7 @@ function buildWelcomeHTML(params: WelcomeEmailParams): string {
 
             <!-- CTA -->
             <div style="text-align:center;margin-bottom:8px">
-              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}"
+              <a href="${process.env.NEXTAUTH_URL || 'https://ebright-inventory.vercel.app'}"
                  style="display:inline-block;background:#2563eb;color:#ffffff;padding:14px 36px;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:0.3px">
                 Sign In to My Inventory →
               </a>
@@ -118,8 +119,7 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<void
     : role === 'USER_RM'  ? 'Regional Manager'
     : 'Branch Manager';
 
-  await resend.emails.send({
-    from: 'My Inventory System <onboarding@resend.dev>',
+  await sendEmail({
     to: email,
     subject: `Welcome to My Inventory — Your ${roleLabel} Account is Ready`,
     html: buildWelcomeHTML(params),

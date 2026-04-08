@@ -19,7 +19,9 @@ export default function RootLayout({
     lowerPath === '/login' ||
     lowerPath.includes('rm_dashboard') ||
     lowerPath.includes('inventory-branch') ||
-    lowerPath.includes('bm-pickup');
+    lowerPath.includes('bm-pickup') ||
+    lowerPath.includes('dashboard') ||
+    lowerPath.includes('stock-management');
 
   // 🚨 FIXED ERROR: We now use ONE <html> tag to prevent Next.js hydration crashes
   return (
