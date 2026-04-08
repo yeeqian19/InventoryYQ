@@ -3,9 +3,9 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { redirect } from 'next/navigation';
 import { canManageStock } from '@/lib/permissions';
 import { db } from '@/lib/db';
-import StockClient from './StockClient';
 
 export const dynamic = 'force-dynamic';
+import StockClient from './StockClient';
 
 export const metadata = {
   title: 'Stock Management | Inventory Panel',

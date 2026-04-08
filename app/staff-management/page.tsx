@@ -1,6 +1,8 @@
 import StaffClient from './StaffClient';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Staff Management | Superadmin',
 };
