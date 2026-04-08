@@ -117,7 +117,7 @@ export default function BmPickupClient() {
       {/* Header */}
       <div className="bg-slate-900 text-white p-6 shadow-lg">
         <div className="flex items-center gap-4">
-          <button onClick={() => router.push('/')} className="text-white/70 hover:text-white">
+          <button onClick={() => router.push('/inventory-branch')} className="text-white/70 hover:text-white text-xl">
             ←
           </button>
           <div>

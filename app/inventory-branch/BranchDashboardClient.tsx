@@ -278,7 +278,7 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
   const modeColor = activeMode === 'PICKUP' ? 'amber' : activeMode === 'HANDOVER' ? 'blue' : 'emerald';
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-[#f3f7f9] font-sans text-slate-800 overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-screen bg-[#f3f7f9] font-sans text-slate-800 overflow-hidden pb-16 lg:pb-0">
       
       {/* SIDEBAR */}
       <div className="hidden lg:flex w-72 bg-slate-900 text-white flex-col shadow-2xl z-20 relative">
@@ -472,6 +472,39 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
           </div>
         </div>
       </div>
+
+      {/* MOBILE BOTTOM NAV — only visible on mobile */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-2xl flex">
+        <button
+          onClick={() => router.push('/')}
+          className="flex-1 flex flex-col items-center justify-center py-3 text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          <span className="text-lg">🏠</span>
+          <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">Home</span>
+        </button>
+        <button
+          onClick={() => { setActiveMode('PICKUP'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+          className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors ${activeMode === 'PICKUP' ? 'text-amber-500' : 'text-slate-400'}`}
+        >
+          <span className="text-lg">🚚</span>
+          <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">Pickup</span>
+        </button>
+        <button
+          onClick={() => { setActiveMode('HANDOVER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+          className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors ${activeMode === 'HANDOVER' ? 'text-blue-500' : 'text-slate-400'}`}
+        >
+          <span className="text-lg">📸</span>
+          <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">Handover</span>
+        </button>
+        <button
+          onClick={() => { setActiveMode('HISTORY'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+          className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors ${activeMode === 'HISTORY' ? 'text-emerald-500' : 'text-slate-400'}`}
+        >
+          <span className="text-lg">✅</span>
+          <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">History</span>
+        </button>
+      </div>
+
     </div>
   );
 }

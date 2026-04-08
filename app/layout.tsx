@@ -17,7 +17,9 @@ export default function RootLayout({
   const isSpecialPage =
     lowerPath === '/' ||
     lowerPath === '/login' ||
-    lowerPath.includes('rm_dashboard');
+    lowerPath.includes('rm_dashboard') ||
+    lowerPath.includes('inventory-branch') ||
+    lowerPath.includes('bm-pickup');
 
   // 🚨 FIXED ERROR: We now use ONE <html> tag to prevent Next.js hydration crashes
   return (

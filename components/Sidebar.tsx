@@ -34,11 +34,12 @@ export default function Sidebar() {
   );
 
   // 🛑 HIDE LOGIC
-  const shouldHide = 
-    pathname === '/' || 
-    lowerPath === '/login' || 
-    lowerPath.includes('rm_dashboard') || 
-    lowerPath.includes('inventory-branch');
+  const shouldHide =
+    pathname === '/' ||
+    lowerPath === '/login' ||
+    lowerPath.includes('rm_dashboard') ||
+    lowerPath.includes('inventory-branch') ||
+    lowerPath.includes('bm-pickup');
 
   if (shouldHide) return null;
 
