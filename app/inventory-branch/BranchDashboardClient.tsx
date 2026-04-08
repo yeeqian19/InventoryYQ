@@ -280,41 +280,46 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[#f3f7f9] font-sans text-slate-800 overflow-hidden pb-16 lg:pb-0">
       
-      {/* SIDEBAR */}
-      <div className="hidden lg:flex w-72 bg-slate-900 text-white flex-col shadow-2xl z-20 relative">
+      {/* DESKTOP SIDEBAR */}
+      <div className="hidden lg:flex w-72 bg-[#7cb342] text-white flex-col shadow-2xl z-20 relative">
         <div className="p-8">
           <h1 className="text-2xl font-black tracking-tighter uppercase mb-1">My Inventory</h1>
-          <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">Branch Operations</p>
+          <p className="text-[10px] font-bold opacity-50 tracking-[0.2em] mt-2 border-t border-white/20 pt-2 uppercase">Branch Terminal</p>
         </div>
 
-        <div className="px-6 pb-6">
-          <button onClick={() => router.push('/')} className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">
-            <span className="text-lg">←</span> Control Panel
+        <div className="px-4 mb-4">
+          <button onClick={() => router.push('/')} className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-black uppercase tracking-widest transition-colors border border-white/10">
+            <span>⬅️</span> Control Panel
           </button>
         </div>
 
-        <div className="flex-1 px-6 space-y-2 mt-4">
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-4 ml-2">Scanner Modes</p>
-          <button onClick={() => {setActiveMode('PICKUP'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-xs font-black uppercase transition-all ${activeMode === 'PICKUP' ? 'bg-amber-500 text-white shadow-lg shadow-amber-900/50' : 'text-slate-400 hover:bg-white/5'}`}>
+        <nav className="flex-1 py-4 space-y-1 px-2">
+          <p className="text-[10px] font-black opacity-40 uppercase tracking-widest px-4 pb-2">Scanner Modes</p>
+          <button onClick={() => { setActiveMode('PICKUP'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+            className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'PICKUP' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
             <span className="text-xl">🚚</span> 1. BM Pickup
           </button>
-          <button onClick={() => {setActiveMode('HANDOVER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-xs font-black uppercase transition-all ${activeMode === 'HANDOVER' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:bg-white/5'}`}>
+          <button onClick={() => { setActiveMode('HANDOVER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+            className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'HANDOVER' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
             <span className="text-xl">📸</span> 2. Handover
           </button>
-          <button onClick={() => {setActiveMode('HISTORY'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null);}} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-xs font-black uppercase transition-all ${activeMode === 'HISTORY' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/50' : 'text-slate-400 hover:bg-white/5'}`}>
+          <button onClick={() => { setActiveMode('HISTORY'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+            className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'HISTORY' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
             <span className="text-xl">✅</span> 3. History
           </button>
-        </div>
+        </nav>
 
-        <div className="p-6 border-t border-white/10 flex items-center gap-4 bg-slate-950/50">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black shadow-inner bg-${modeColor}-500`}>
-            {activeBranch.substring(0,2)}
-          </div>
-          <div>
-            <p className="text-xs font-black uppercase">{activeBranch} Branch</p>
-            <div className="flex items-center gap-1.5 mt-1">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Terminal Online</p>
+        <div className="p-6 border-t border-white/10 bg-black/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-white text-[#7cb342] flex items-center justify-center font-black shadow-inner">
+              {activeBranch.substring(0, 2)}
+            </div>
+            <div>
+              <p className="text-sm font-black uppercase">{activeBranch} Branch</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                <p className="text-[9px] opacity-50 font-bold uppercase tracking-widest">Terminal Online</p>
+              </div>
             </div>
           </div>
         </div>
