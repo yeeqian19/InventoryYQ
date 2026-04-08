@@ -57,9 +57,10 @@ export async function uploadToGoogleDrive(
 
     return { fileId, webViewLink };
 
-  } catch (error) {
-    // 3. Catch and log exact errors
-    console.error("🔥 Google Drive Upload Error:", error);
-    throw new Error("Failed to upload image to Google Drive.");
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    const detail = (error as { response?: { data?: unknown } })?.response?.data;
+    console.error("🔥 Google Drive Upload Error:", msg, detail ? JSON.stringify(detail) : '');
+    throw new Error(`Failed to upload image to Google Drive. Reason: ${msg}`);
   }
 }
