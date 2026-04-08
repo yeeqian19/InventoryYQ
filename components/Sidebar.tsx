@@ -6,10 +6,16 @@ import { useSession } from 'next-auth/react';
 import { useState } from 'react'; 
 
 const allNavItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: '📦', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
-  { name: 'Student Manager', href: '/student-manager', icon: '👥', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
-  { name: 'Scan & Approve', href: '/scan-approve', icon: '📷', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
-  { name: 'Scan Log', href: '/scan-log', icon: '📋', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
+  // HQ / RM
+  { name: 'Dashboard',        href: '/dashboard',         icon: '📦', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
+  { name: 'Student Manager',  href: '/student-manager',   icon: '👥', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Scan & Approve',   href: '/scan-approve',      icon: '📷', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Scan Log',         href: '/scan-log',          icon: '📋', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
+  { name: 'Stock Management', href: '/stock-management',  icon: '🗃️', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Staff Management', href: '/staff-management',  icon: '👤', roles: ['SUPERADMIN'] },
+  // BM
+  { name: 'Receiving Terminal', href: '/inventory-branch', icon: '📥', roles: ['USER_BM', 'SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'BM Pickup',          href: '/bm-pickup',        icon: '🚚', roles: ['USER_BM', 'SUPERADMIN', 'ADMIN_HQ'] },
 ];
 
 export default function Sidebar() {
