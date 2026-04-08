@@ -46,13 +46,17 @@ export async function POST(req: Request) {
       },
     });
 
-    sendWelcomeEmail({
-      name,
-      email,
-      role,
-      branchCode: role === 'USER_BM' ? branchCode : null,
-      temporaryPassword: password,
-    }).catch((err) => console.error('Welcome email failed:', err));
+    try {
+      await sendWelcomeEmail({
+        name,
+        email,
+        role,
+        branchCode: role === 'USER_BM' ? branchCode : null,
+        temporaryPassword: password,
+      });
+    } catch (emailErr) {
+      console.error('Welcome email failed (non-fatal):', emailErr);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
