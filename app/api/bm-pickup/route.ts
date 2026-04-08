@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { uploadToGoogleDrive } from '@/lib/googleDrive';
 import { generateEmailHTML } from '@/lib/emailTemplate';
 import { logScanAction } from '@/lib/logger';
-import { transporter } from '@/lib/emailTransport';
+import { resend } from '@/lib/emailTransport';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { BmPickupRequestBody } from '@/types';
@@ -103,9 +103,9 @@ export async function POST(req: Request): Promise<NextResponse> {
       photoLink: webViewLink,
     });
 
-    await transporter.sendMail({
-      from: `"Inventory System" <${process.env.SMTP_USER}>`,
-      to: process.env.NOTIFY_EMAIL,
+    await resend.emails.send({
+      from: 'Inventory System <onboarding@resend.dev>',
+      to: process.env.NOTIFY_EMAIL!,
       subject: `✅ BM Pick Up Confirmed – ${branchCode || record.branch_code} / ${barcode}`,
       html,
     });

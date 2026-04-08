@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { uploadToGoogleDrive } from '@/lib/googleDrive';
 import { generateEmailHTML } from '@/lib/emailTemplate';
 import { logScanAction } from '@/lib/logger';
-import { transporter } from '@/lib/emailTransport';
+import { resend } from '@/lib/emailTransport';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { HandoverRequestBody } from '@/types';
@@ -83,7 +83,6 @@ export async function POST(req: Request): Promise<NextResponse> {
     });
 
     // Step D: Send email using shared template
-    const base64Only = base64Data.replace(/^data:image\/\w+;base64,/, '');
     const html = generateEmailHTML({
       title: '✅ Enrollment Gift Handed Over',
       detailsArray: [
@@ -102,19 +101,11 @@ export async function POST(req: Request): Promise<NextResponse> {
       photoLink: webViewLink,
     });
 
-    await transporter.sendMail({
-      from: `"Inventory System" <${process.env.SMTP_USER}>`,
-      to: process.env.NOTIFY_EMAIL,
+    await resend.emails.send({
+      from: 'Inventory System <onboarding@resend.dev>',
+      to: process.env.NOTIFY_EMAIL!,
       subject: `✅ Handover Complete – ${studentName || record.student_name || barcode}`,
       html,
-      attachments: [
-        {
-          filename: fileName,
-          content: base64Only,
-          encoding: 'base64',
-          contentType: 'image/jpeg',
-        },
-      ],
     });
 
     return NextResponse.json({

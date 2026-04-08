@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { transporter } from '@/lib/emailTransport';
+import { resend } from '@/lib/emailTransport';
 import { generateEmailHTML } from '@/lib/emailTemplate';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -109,9 +109,9 @@ export async function POST(req: Request): Promise<NextResponse<BranchScanRespons
           { label: 'Date & Time', value: timestamp },
         ],
       });
-      await transporter.sendMail({
-        from: `"Inventory System" <${process.env.SMTP_USER}>`,
-        to: process.env.NOTIFY_EMAIL,
+      await resend.emails.send({
+        from: 'Inventory System <onboarding@resend.dev>',
+        to: process.env.NOTIFY_EMAIL!,
         subject: `✅ Handover Completed – ${updated.student_name}`,
         html,
       });
