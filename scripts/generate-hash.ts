@@ -5,7 +5,7 @@
  * Or use: npx ts-node scripts/generate-hash.ts
  */
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // Passwords to hash
 const passwords = ['admin123', 'branch123'];
