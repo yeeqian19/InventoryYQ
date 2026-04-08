@@ -29,15 +29,56 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
 
     const stationNum = station || 1;
     const trimmedBarcode = barcode.trim().toUpperCase();
-    
-    const record = await db.inventory_distribution_new.findFirst({
-      where: {
-        OR: [
-          { barcode_sk: { contains: trimmedBarcode, mode: 'insensitive' } },
-          { barcode_eg: { contains: trimmedBarcode, mode: 'insensitive' } },
-        ],
-      },
-    });
+
+    // Use raw SQL to compute barcode on-the-fly — works even if barcode_sk/barcode_eg columns are NULL
+    type RawRecord = {
+      student_id: number;
+      doc_no: string | null;
+      doc_date: Date | null;
+      branch_code: string | null;
+      student_name: string | null;
+      package: string | null;
+      type: string | null;
+      sk_prep: boolean | null;
+      sk_prep_date: Date | null;
+      eg_prep: boolean | null;
+      eg_prep_date: Date | null;
+      bm_pickup: boolean | null;
+      bm_pickup_date: Date | null;
+      student_received: boolean | null;
+      student_received_date: Date | null;
+      barcode_sk: string | null;
+      barcode_eg: string | null;
+      remark: string | null;
+      proof_photo: string | null;
+      bm_pickup_photo: string | null;
+      matched_type: string;
+    };
+
+    const rows = await db.$queryRaw<RawRecord[]>`
+      SELECT *,
+        CASE
+          WHEN UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || LPAD(student_id::text, 6, '0'))) = ${trimmedBarcode} THEN 'SK'
+          WHEN UPPER(COALESCE(barcode_eg,
+            CASE WHEN package ILIKE '9M%' OR package ILIKE '12M%'
+              THEN branch_code || '-EG-' || LPAD(student_id::text, 6, '0')
+              ELSE NULL END
+          )) = ${trimmedBarcode} THEN 'EG'
+          ELSE NULL
+        END AS matched_type
+      FROM inventory_distribution_new
+      WHERE
+        UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || LPAD(student_id::text, 6, '0'))) = ${trimmedBarcode}
+        OR UPPER(COALESCE(barcode_eg,
+          CASE WHEN package ILIKE '9M%' OR package ILIKE '12M%'
+            THEN branch_code || '-EG-' || LPAD(student_id::text, 6, '0')
+            ELSE NULL END
+        )) = ${trimmedBarcode}
+      LIMIT 1
+    `;
+
+    const record = rows[0] ?? null;
+    const isSKBarcode = record?.matched_type === 'SK';
 
     if (!record) {
       return NextResponse.json({ error: 'Barcode not found' }, { status: 404 });
@@ -45,12 +86,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
 
     // --- SAFETY CHECK: Handover (St 3) requires Pickup (St 2) ---
     if (stationNum === 3 && !record.bm_pickup) {
-      return NextResponse.json({ 
-        error: 'NOT READY: This item has not been picked up by the Branch Manager yet.' 
+      return NextResponse.json({
+        error: 'NOT READY: This item has not been picked up by the Branch Manager yet.'
       }, { status: 400 });
     }
-
-    const isSKBarcode = record.barcode_sk?.toUpperCase().includes(trimmedBarcode);
 
     // --- SETUP ATOMIC LOCK & UPDATE DATA ---
     const updateData: Record<string, unknown> = {};
@@ -100,10 +139,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
     // --- DEDUCT FROM STOCK INVENTORY (Station 1 only) ---
     if (stationNum === 1 && updateResult.count > 0) {
       if (isSKBarcode) {
-        // Deduct one packed starter kit
+        // Deduct one named starter kit (and total packed count)
         await db.starterKit.updateMany({
-          where: { id: 'default', packedCount: { gt: 0 } },
-          data: { packedCount: { decrement: 1 } },
+          where: { id: 'default', namedCount: { gt: 0 } },
+          data: {
+            namedCount: { decrement: 1 },
+            packedCount: { decrement: 1 },
+          },
         });
       } else {
         // Deduct one unit of the matching enrollment gift
