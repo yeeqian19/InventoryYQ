@@ -54,6 +54,7 @@ export default async function DashboardPage() {
     const sType = resolveStudentType(row.type, row.package);
     const items: FormattedItem[] = [];
 
+    // NEW: SK always + EG if 9M (LEGO) or 12M (SMARTWATCH)
     if (sType === 'NEW') {
       items.push({
         branch: finalBranch,
@@ -78,6 +79,9 @@ export default async function DashboardPage() {
         });
       }
     }
+
+    // TRIAL: no SK, no EG — trial students don't receive inventory
+    // RENEWAL: no SK, no EG — student already has their kit from initial enrollment
 
     return items;
   });

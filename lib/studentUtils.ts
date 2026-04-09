@@ -12,11 +12,18 @@ export function resolveStudentType(type?: string | null, pkg?: string | null): S
   const rawType = (type || '').trim().toUpperCase();
   const rawPkg  = (pkg  || '').trim().toUpperCase();
 
+  // Trust the explicit type field first
   if (rawType.includes('RENEWAL')) return 'RENEWAL';
   if (rawType.includes('TRIAL'))   return 'TRIAL';
-  if (rawType === 'NEW' || rawPkg === 'NEW') return 'NEW';
-  // Default: treat unknown records as NEW so they go through the distribution flow
-  return 'NEW';
+  if (rawType === 'NEW')           return 'NEW';
+
+  // Fallback: infer from package when type is missing/dirty
+  // Trial students have package = "Trial" (the literal word)
+  if (rawPkg === 'TRIAL') return 'TRIAL';
+  // Real package (3M/6M/9M/12M) = enrolled student → New
+  if (['3M', '6M', '9M', '12M'].includes(rawPkg)) return 'NEW';
+
+  return 'TRIAL'; // no type, no real package = unconfirmed trial
 }
 
 /**
