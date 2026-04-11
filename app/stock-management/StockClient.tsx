@@ -34,6 +34,7 @@ const COL = {
   need:      '#f4cccc',
   inCart:    '#fff2cc',
   ordered:   '#fce5cd',
+  received:  '#d0f0e8',
   named:     '#d9ead3',
   unnamed:   '#fff2cc',
   total:     '#cfe2f3',
@@ -220,7 +221,8 @@ async function handleSaveEdit() {
             </th>
           )}
           {canEdit && (
-            <th className="pb-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+            <th className="pb-3 px-4 text-[10px] font-black uppercase tracking-widest text-center"
+                style={{ backgroundColor: COL.received, color: '#1a7a56' }}>
               Received
             </th>
           )}
@@ -327,7 +329,7 @@ async function handleSaveEdit() {
 
         {/* RECEIVED — receive from ordered */}
         {canEdit && (
-          <td className="py-3 px-4 text-center">
+          <td className="py-3 px-4 text-center" style={{ backgroundColor: COL.received }}>
             <div className="flex flex-col items-center gap-1.5">
               <span className="text-[8px] text-slate-400 font-black uppercase">Ordered: {item.orderedCount}</span>
               <span className="text-[8px] text-emerald-600 font-black uppercase tracking-widest">Received Qty</span>
@@ -456,6 +458,7 @@ async function handleSaveEdit() {
           { label: 'Need',       color: COL.need },
           { label: 'In Cart',    color: COL.inCart },
           { label: 'Ordered',    color: COL.ordered },
+          { label: 'Received',   color: COL.received },
         ].map(({ label, color }) => (
           <div key={label} className="flex items-center gap-2">
             <div className="w-4 h-4 rounded border border-black/10" style={{ backgroundColor: color }} />
