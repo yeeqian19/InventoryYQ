@@ -7,6 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
+import BranchMultiSelect from '@/components/BranchMultiSelect';
 
 const COLORS = { prepared: '#10b981', unprepared: '#ef4444' };
 
@@ -87,8 +88,7 @@ export default function DashboardClient({
   const [hasMounted, setHasMounted] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>('overview');
 
-  const [activeRegion, setActiveRegion] = useState<Region>('ALL');
-  const [selectedBranch, setSelectedBranch] = useState('All Branches');
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([]); // [] = All Branches
   const [selectedType, setSelectedType] = useState('NEW');
   const [quickDate, setQuickDate] = useState('all');
 
@@ -111,14 +111,6 @@ export default function DashboardClient({
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-
-  const BRANCHES_TO_SHOW = useMemo(() => {
-    let list = BRANCH_MASTER_LIST;
-    if (activeRegion !== 'ALL') {
-      list = list.filter(b => b.region === activeRegion);
-    }
-    return ['All Branches', ...list.map(b => b.code).sort()];
-  }, [activeRegion]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
@@ -172,13 +164,9 @@ export default function DashboardClient({
     const validBranchCodes = BRANCH_MASTER_LIST.map(b => b.code);
     let data = dbData.filter(item => validBranchCodes.includes(item.branch));
 
-    if (activeRegion !== 'ALL' && selectedBranch === 'All Branches') {
-      const regionCodes = BRANCH_MASTER_LIST.filter(b => b.region === activeRegion).map(b => b.code);
-      data = data.filter(item => regionCodes.includes(item.branch));
-    }
-
-    if (selectedBranch !== 'All Branches') {
-      data = data.filter((item) => item.branch === selectedBranch);
+    // Filter by branch(es) - empty array means all branches
+    if (selectedBranches.length > 0) {
+      data = data.filter((item) => selectedBranches.includes(item.branch));
     }
 
     if (selectedType !== 'All') {
@@ -189,7 +177,7 @@ export default function DashboardClient({
       if (startDate && endDate) return item.date >= startDate && item.date <= endDate;
       return true;
     });
-  }, [selectedBranch, selectedType, startDate, endDate, dbData, activeRegion]);
+  }, [selectedBranches, selectedType, startDate, endDate, dbData]);
 
   const totalItems = filteredData.reduce((sum, item) => sum + item.total, 0);
   const totalPrepared = filteredData.reduce((sum, item) => sum + item.prepared, 0);
@@ -259,26 +247,10 @@ export default function DashboardClient({
             <option value="lastMonth">Last Month</option>
           </select>
         </div>
-        {/* Region + Branch row */}
-        <div className="flex gap-2 items-center">
-          <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-            {(['ALL', 'A', 'B', 'C'] as const).map((r) => (
-              <button
-                key={r}
-                onClick={() => { setActiveRegion(r); setSelectedBranch('All Branches'); }}
-                className={`px-3 py-1 rounded-lg text-[10px] font-black transition-all ${activeRegion === r ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-          <select
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-black text-slate-700 outline-none shadow-sm cursor-pointer"
-          >
-            {BRANCHES_TO_SHOW.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
+        {/* Branch Selection */}
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Branch</label>
+          <BranchMultiSelect selected={selectedBranches} onChange={setSelectedBranches} />
         </div>
       </div>
 
@@ -493,30 +465,9 @@ export default function DashboardClient({
               <p className="text-[9px] font-bold text-slate-400 uppercase">{user?.role || 'User'}</p>
             </div>
 
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2 text-center">Region Filter</h3>
-            <div className="grid grid-cols-4 gap-1 mb-6 bg-slate-100 p-1 rounded-xl">
-              {(['ALL', 'A', 'B', 'C'] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => { setActiveRegion(r); setSelectedBranch('All Branches'); }}
-                  className={`py-1.5 rounded-lg text-[10px] font-black transition-all ${activeRegion === r ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2 text-center">Branches</h3>
-            <div className="flex flex-col gap-1.5">
-              {BRANCHES_TO_SHOW.map((branch) => (
-                <button
-                  key={branch}
-                  onClick={() => setSelectedBranch(branch)}
-                  className={`w-full text-left px-5 py-3 rounded-xl text-xs transition-all duration-300 ${selectedBranch === branch ? 'bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-100' : 'text-slate-500 hover:bg-slate-50 font-semibold'}`}
-                >
-                  {branch}
-                </button>
-              ))}
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2 text-center">Select Branches</h3>
+            <div className="px-2 mb-6">
+              <BranchMultiSelect selected={selectedBranches} onChange={setSelectedBranches} />
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import BranchMultiSelect from '@/components/BranchMultiSelect';
 
 type ScanLog = {
   id: string;
@@ -39,11 +40,11 @@ export default function ScanLogClient({ initialLogs }: { initialLogs: ScanLog[] 
   const [quickDate, setQuickDate] = useState('thisWeek');
   const [startDate, setStartDate] = useState(weekRange.monday);
   const [endDate, setEndDate] = useState(weekRange.today);
-  const [branchFilter, setBranchFilter] = useState('All Branches');
+  const [branchFilter, setBranchFilter] = useState<string[]>([]); // [] = All Branches
   
   // This state holds the actively applied filters (updated when "Find Logs" is clicked)
   const [activeFilter, setActiveFilter] = useState({ 
-    branch: 'All Branches', 
+    selectedBranches: [] as string[], // [] = All Branches
     start: weekRange.monday, 
     end: weekRange.today 
   });
@@ -94,10 +95,11 @@ export default function ScanLogClient({ initialLogs }: { initialLogs: ScanLog[] 
   const filteredLogs = useMemo(() => {
     let data = initialLogs;
 
-    // 1. Filter by Branch
-    if (activeFilter.branch !== 'All Branches') {
-      data = data.filter(log => log.branch === activeFilter.branch);
+    // 1. Filter by Branch(es)
+    if (activeFilter.selectedBranches.length > 0) {
+      data = data.filter(log => activeFilter.selectedBranches.includes(log.branch));
     }
+    // If empty array, show all branches
 
     // 2. Filter by Date
     if (activeFilter.start && activeFilter.end) {
@@ -142,49 +144,10 @@ export default function ScanLogClient({ initialLogs }: { initialLogs: ScanLog[] 
         {/* Filter Controls */}
         <div className="flex flex-wrap items-center gap-4">
           
-          {/* Branch Dropdown */}
+          {/* Branch Multi-Select */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Branch Filter</label>
-            <select 
-              value={branchFilter} 
-              onChange={(e) => setBranchFilter(e.target.value)} 
-              className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none min-w-[160px] cursor-pointer focus:border-blue-500 transition-all"
-            >
-              <option value="All Branches">All Branches</option>
-              <optgroup label="── Region A ──">
-                <option value="RBY">RBY (Rimbayu)</option>
-                <option value="KLG">KLG (Klang)</option>
-                <option value="SHA">SHA (Shah Alam)</option>
-                <option value="SA">SA (Setia Alam)</option>
-                <option value="DA">DA (Denai Alam)</option>
-                <option value="EGR">EGR (Eco Grandeur)</option>
-                <option value="ST">ST (Subang Taipan)</option>
-                <option value="AC">AC (Anggun City)</option>
-                <option value="SBY">SBY (Sungai Buloh)</option>
-              </optgroup>
-              <optgroup label="── Region B ──">
-                <option value="SLY">SLY (Selayang)</option>
-                <option value="DK">DK (Danau Kota)</option>
-                <option value="KD">KD (Kota Damansara)</option>
-                <option value="AMP">AMP (Ampang)</option>
-                <option value="SP">SP (Sri Petaling)</option>
-                <option value="BTHO">BTHO (Bandar Tun Hussein Onn)</option>
-                <option value="KTG">KTG (Kajang TTDI Groove)</option>
-                <option value="DSH">DSH (Desa Sri Hartamas)</option>
-                <option value="TSG">TSG (Taman Sri Gombak)</option>
-              </optgroup>
-              <optgroup label="── Region C ──">
-                <option value="PJY">PJY (Putrajaya)</option>
-                <option value="KW">KW (Kota Warisan)</option>
-                <option value="BBB">BBB (Bandar Baru Bangi)</option>
-                <option value="CJY">CJY (Cyberjaya)</option>
-                <option value="BSP">BSP (Bandar Seri Putra)</option>
-                <option value="SNT">SNT (Senawang Taipan)</option>
-                <option value="SBN">SBN (Seremban)</option>
-                <option value="DP">DP (Dataran Puchong Utama)</option>
-              </optgroup>
-              <option value="HQ">HQ - Headquarters</option>
-            </select>
+            <BranchMultiSelect selected={branchFilter} onChange={setBranchFilter} />
           </div>
 
           {/* Date Range Controls */}
@@ -214,7 +177,7 @@ export default function ScanLogClient({ initialLogs }: { initialLogs: ScanLog[] 
           <div className="flex flex-col gap-1.5 justify-end h-full">
              <label className="text-[9px] text-transparent hidden md:block">&nbsp;</label> 
              <button 
-              onClick={() => setActiveFilter({ branch: branchFilter, start: startDate, end: endDate })} 
+              onClick={() => setActiveFilter({ selectedBranches: branchFilter, start: startDate, end: endDate })} 
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-md transition-transform active:scale-95 h-[38px]"
             >
               Find Logs

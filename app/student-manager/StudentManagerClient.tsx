@@ -1,19 +1,10 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
+import BranchMultiSelect from '@/components/BranchMultiSelect';
 
-// --- NEW MASTER BRANCH CONFIGURATION ---
-const BRANCH_MASTER_LIST = [
-  // Region A
-  "AC", "DA", "EGR", "KLG", "RBY", "SA", "SBY", "SHA", "ST",
-  // Region B
-  "AMP", "BTHO", "DK", "DSH", "KD", "KTG", "SLY", "SP", "TSG",
-  // Region C
-  "BBB", "BSP", "CJY", "DP", "KW", "ONL", "PJY", "SBN", "SNT",
-  "HQ"
-];
 
 type Student = {
   student_id: string; 
@@ -32,7 +23,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
   // --- STATE ---
   const [activeSystem, setActiveSystem] = useState<'SK' | 'EG'>('SK');
   const [searchTerm, setSearchTerm] = useState(''); 
-  const [branchFilter, setBranchFilter] = useState('all');
+  const [branchFilter, setBranchFilter] = useState<string[]>([]); // [] = All Branches
   const [typeFilter, setTypeFilter] = useState('New'); 
   const [quickDate, setQuickDate] = useState('thisWeek');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -59,8 +50,8 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
   const [startDate, setStartDate] = useState(weekRange.monday);
   const [endDate, setEndDate] = useState(weekRange.today);
   
-  const [activeFilter, setActiveFilter] = useState({ 
-    branch: 'all', type: 'New', start: weekRange.monday, end: weekRange.today 
+  const [activeFilter, setActiveFilter] = useState<{ branches: string[]; type: string; start: string; end: string }>({
+    branches: [], type: 'New', start: weekRange.monday, end: weekRange.today
   });
 
   const getSafeBarcodeValue = (code: string | undefined) => {
@@ -70,9 +61,6 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
     return sanitized.length > 25 ? sanitized.substring(0, 25).trim() : sanitized;
   };
 
-  const BRANCHES = useMemo(() => {
-    return ['All Branches', ...BRANCH_MASTER_LIST.sort()];
-  }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
@@ -155,8 +143,8 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
     }
 
     // 3. Branch Filter
-    if (activeFilter.branch !== 'all') {
-      data = data.filter(s => s.branch === activeFilter.branch);
+    if (activeFilter.branches.length > 0) {
+      data = data.filter(s => activeFilter.branches.includes(s.branch));
     }
 
     // 4. Type Filter (Safeguarded with toLowerCase to prevent exact-match bugs)
@@ -224,42 +212,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
 
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Branch</label>
-              <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="bg-emerald-50 border-none rounded-xl px-5 py-3 text-sm font-black text-emerald-700 outline-none min-w-[180px] cursor-pointer">
-                <option value="all">All Branches</option>
-                <optgroup label="── Region A ──">
-                  <option value="RBY">RBY (Rimbayu)</option>
-                  <option value="KLG">KLG (Klang)</option>
-                  <option value="SHA">SHA (Shah Alam)</option>
-                  <option value="SA">SA (Setia Alam)</option>
-                  <option value="DA">DA (Denai Alam)</option>
-                  <option value="EGR">EGR (Eco Grandeur)</option>
-                  <option value="ST">ST (Subang Taipan)</option>
-                  <option value="AC">AC (Anggun City Rawang)</option>
-                  <option value="SBY">SBY (Sungai Buloh)</option>
-                </optgroup>
-                <optgroup label="── Region B ──">
-                  <option value="SLY">SLY (Selayang)</option>
-                  <option value="DK">DK (Danau Kota)</option>
-                  <option value="KD">KD (Kota Damansara)</option>
-                  <option value="AMP">AMP (Ampang)</option>
-                  <option value="SP">SP (Sri Petaling)</option>
-                  <option value="BTHO">BTHO (Bandar Tun Hussein Onn)</option>
-                  <option value="KTG">KTG (Kajang TTDI Groove)</option>
-                  <option value="DSH">DSH (Desa Sri Hartamas)</option>
-                  <option value="TSG">TSG (Taman Sri Gombak)</option>
-                </optgroup>
-                <optgroup label="── Region C ──">
-                  <option value="PJY">PJY (Putrajaya)</option>
-                  <option value="KW">KW (Kota Warisan)</option>
-                  <option value="BBB">BBB (Bandar Baru Bangi)</option>
-                  <option value="CJY">CJY (Cyberjaya)</option>
-                  <option value="BSP">BSP (Bandar Seri Putra)</option>
-                  <option value="SNT">SNT (Senawang Taipan)</option>
-                  <option value="SBN">SBN (Seremban)</option>
-                  <option value="DP">DP (Dataran Puchong Utama)</option>
-                  <option value="ONL">ONL (Online / Others)</option>
-                </optgroup>
-              </select>
+              <BranchMultiSelect selected={branchFilter} onChange={setBranchFilter} />
             </div>
 
             <div className="flex flex-col gap-2">
@@ -297,7 +250,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
                     Clear ({selectedIds.length})
                   </button>
                 )}
-                <button onClick={() => { setActiveFilter({ branch: branchFilter, type: typeFilter, start: startDate, end: endDate }); setSelectedIds([]); }} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 transition-all uppercase tracking-tight flex-1 lg:flex-none">
+                <button onClick={() => { setActiveFilter({ branches: branchFilter, type: typeFilter, start: startDate, end: endDate }); setSelectedIds([]); }} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 transition-all uppercase tracking-tight flex-1 lg:flex-none">
                   Find Students
                 </button>
                 <button onClick={() => window.print()} disabled={selectedIds.length === 0} className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-emerald-600 transition-all disabled:opacity-50 uppercase tracking-tight flex-1 lg:flex-none">

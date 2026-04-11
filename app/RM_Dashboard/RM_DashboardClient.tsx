@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ArrowLeft, Search, UserSearch, Package, Gift, Layers, Globe } from 'lucide-react';
+import BranchMultiSelect from '@/components/BranchMultiSelect';
 
 // --- NEW MASTER BRANCH CONFIGURATION ---
 type Region = 'A' | 'B' | 'C' | 'HQ';
@@ -70,7 +71,7 @@ function toDateString(date: Date): string {
 
 export default function RM_DashboardClient({ initialData }: { initialData: StudentData[] }) {
   const router = useRouter();
-  const [activeRegion, setActiveRegion] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
+  const [activeBranches, setActiveBranches] = useState<string[]>([]); // [] = all branches
   const [activeType, setActiveType] = useState<'ALL' | 'NEW' | 'RENEWAL' | 'TRIAL'>('NEW');
   const [itemToggle, setItemToggle] = useState<'ALL' | 'SK' | 'EG'>('ALL');
   const [expandedBranch, setExpandedBranch] = useState<string | null>(null);
@@ -136,10 +137,9 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
       filtered = filtered.filter(s => s.type?.toUpperCase() === activeType.toUpperCase());
     }
     
-    // Filter by Region
-    if (activeRegion !== 'ALL') {
-      const regionCodes = BRANCH_LIST.filter(b => b.region === activeRegion).map(b => b.code);
-      filtered = filtered.filter(s => regionCodes.includes(s.branch));
+    // Filter by Branch(es) - empty means all branches
+    if (activeBranches.length > 0) {
+      filtered = filtered.filter(s => activeBranches.includes(s.branch));
     }
 
     if (fromDate || toDate) {
@@ -157,12 +157,12 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
       filtered = filtered.filter(s => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
     }
 
-    // Always show branches based on the Region selection from the Master List
-    const masterRegionList = activeRegion === 'ALL' 
-      ? BRANCH_LIST 
-      : BRANCH_LIST.filter(b => b.region === activeRegion);
+    // Show branches based on the selection - if empty, show all
+    const branchesToShow = activeBranches.length > 0
+      ? BRANCH_LIST.filter(b => activeBranches.includes(b.code))
+      : BRANCH_LIST;
 
-    const finalBranches = masterRegionList
+    const finalBranches = branchesToShow
       .filter(b => b.code.toLowerCase().includes(branchSearch.toLowerCase()) || b.name.toLowerCase().includes(branchSearch.toLowerCase()))
       .sort((a, b) => a.code.localeCompare(b.code));
 
@@ -201,7 +201,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
         list: displayedList 
       };
     });
-  }, [initialData, activeRegion, activeType, itemToggle, fromDate, toDate, branchSearch, studentSearch]);
+  }, [initialData, activeBranches, activeType, itemToggle, fromDate, toDate, branchSearch, studentSearch]);
 
   const totalUnits = branchStats.reduce((a, b) => a + b.total, 0);
   const totalPrep = branchStats.reduce((a, b) => a + b.prep, 0);
@@ -273,22 +273,10 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                 ))}
               </div>
 
-              {/* REGION TOGGLE - UPDATED */}
-              <div className="flex bg-slate-900 p-1 rounded-xl shadow-lg">
-                {[
-                  {id: 'ALL', icon: <Globe size={12}/>},
-                  {id: 'A', icon: null},
-                  {id: 'B', icon: null},
-                  {id: 'C', icon: null}
-                ].map(r => (
-                  <button 
-                    key={r.id} 
-                    onClick={() => setActiveRegion(r.id as 'ALL' | 'A' | 'B' | 'C')} 
-                    className={`px-5 py-2 rounded-lg text-[10px] font-black transition-all flex items-center gap-2 ${activeRegion === r.id ? 'bg-emerald-500 text-white shadow-md scale-105' : 'text-slate-500 hover:text-white'}`}
-                  >
-                    {r.icon} {r.id === 'ALL' ? 'ALL' : `REG ${r.id}`}
-                  </button>
-                ))}
+              {/* BRANCH MULTI-SELECT - UPDATED */}
+              <div className="flex items-center gap-3">
+                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Branches:</label>
+                <BranchMultiSelect selected={activeBranches} onChange={setActiveBranches} />
               </div>
             </div>
           </div>
