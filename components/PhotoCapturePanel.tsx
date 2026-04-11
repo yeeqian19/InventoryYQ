@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useId, useState } from 'react';
+import React, { useId, useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface PhotoCapturePanelProps {
   title: string;
@@ -37,6 +38,13 @@ export default function PhotoCapturePanel({
 
   const [isCompressing, setIsCompressing]   = useState(false);
   const [lightboxOpen,  setLightboxOpen]    = useState(false);
+  const portalRef = useRef<Element | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    portalRef.current = document.body;
+    setPortalReady(true);
+  }, []);
 
   // ── Image compression ──────────────────────────────────────────────────────
   const compressImage = (file: File): Promise<string> =>
@@ -82,12 +90,12 @@ export default function PhotoCapturePanel({
   if (accentColor === 'blue')  accent = { border: 'border-blue-500',  bar: 'bg-blue-500',  btn: 'bg-blue-600 shadow-blue-600/30'   };
   if (accentColor === 'amber') accent = { border: 'border-amber-400', bar: 'bg-amber-500', btn: 'bg-amber-500 shadow-amber-500/30' };
 
-  return (
-    <>
-      {/* ── Lightbox overlay ─────────────────────────────────────────────── */}
-      {lightboxOpen && exampleImage && (
+  // Lightbox rendered via portal directly on document.body so it is never
+  // clipped by overflow-hidden / overflow-y-auto ancestors (iOS Safari bug)
+  const lightbox = lightboxOpen && exampleImage && portalReady && portalRef.current
+    ? createPortal(
         <div
-          className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setLightboxOpen(false)}
         >
           <div className="relative max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
@@ -107,8 +115,15 @@ export default function PhotoCapturePanel({
               ✕
             </button>
           </div>
-        </div>
-      )}
+        </div>,
+        portalRef.current
+      )
+    : null;
+
+  return (
+    <>
+      {/* ── Lightbox rendered at body level via portal ───────────────────── */}
+      {lightbox}
 
       {/* ── Main panel ───────────────────────────────────────────────────── */}
       <div className="flex flex-col items-center w-full p-8 mt-6">
