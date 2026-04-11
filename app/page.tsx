@@ -16,9 +16,9 @@ export default async function RootPage() {
   const userName = session?.user?.name || "User";
 
   const allMenuItems = [
-    { name: 'MY INVENTORY HQ',     icon: '🏢', color: 'bg-[#418bca]', href: '/dashboard',        roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
-    { name: 'RM DASHBOARD',        icon: '📊', color: 'bg-[#00c0ef]', href: '/RM_Dashboard',      roles: ['SUPERADMIN', 'USER_RM'] },
-    { name: 'MY INVENTORY BRANCH', icon: '📍', color: 'bg-[#00a65a]', href: '/inventory-branch',  roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM', 'USER_BM'] },
+    { name: 'MY INVENTORY (HQ)',     icon: '🏢', color: 'bg-[#418bca]', href: '/dashboard',        roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
+    { name: 'RM DASHBOARD',         icon: '📊', color: 'bg-[#00c0ef]', href: '/RM_Dashboard',      roles: ['SUPERADMIN', 'USER_RM'] },
+    { name: 'MY INVENTORY (BRANCH)', icon: '📍', color: 'bg-[#00a65a]', href: '/inventory-branch',  roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM', 'USER_BM'] },
     { name: 'STOCK MANAGEMENT',    icon: '📦', color: 'bg-[#605ca8]', href: '/stock-management',  roles: ['SUPERADMIN', 'ADMIN_HQ'] },
     { name: 'STAFF MANAGEMENT',    icon: '👥', color: 'bg-[#1e293b]', href: '/staff-management',  roles: ['SUPERADMIN'] },
   ];
