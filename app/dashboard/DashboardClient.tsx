@@ -454,10 +454,10 @@ export default function DashboardClient({
       </aside>
 
       {/* CONTENT AREA (offset by sidebar width) */}
-      <div className="ml-72 flex-1 flex gap-8 p-6 bg-[#fcfdfd] items-stretch">
+      <div className="ml-72 flex-1 grid grid-cols-[320px_1fr] gap-8 p-6 bg-[#fcfdfd]">
 
-        {/* WHITE FILTER PANEL — stretches to match content height */}
-        <div className="w-80 flex-shrink-0 self-stretch">
+        {/* WHITE FILTER PANEL — same grid row so it naturally matches height */}
+        <div className="row-start-1 row-end-3">
           <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-5 h-full flex flex-col">
             <div className="mb-6 px-2 pb-6 border-b border-slate-50">
               <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Authenticated as</p>
@@ -472,7 +472,7 @@ export default function DashboardClient({
           </div>
         </div>
 
-      <div className="flex-1 flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">Distribution Progress</h1>
@@ -555,7 +555,6 @@ export default function DashboardClient({
             </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );
