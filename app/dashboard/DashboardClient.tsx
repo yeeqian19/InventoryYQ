@@ -454,11 +454,11 @@ export default function DashboardClient({
       </aside>
 
       {/* CONTENT AREA (offset by sidebar width) */}
-      <div className="ml-72 flex-1 flex gap-8 p-6 bg-[#fcfdfd]">
+      <div className="ml-72 flex-1 flex gap-8 p-6 bg-[#fcfdfd] items-stretch">
 
-        {/* WHITE FILTER PANEL */}
-        <div className="w-80 flex-shrink-0">
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-5 sticky top-6 max-h-[90vh] overflow-y-auto no-scrollbar">
+        {/* WHITE FILTER PANEL — stretches to match content height */}
+        <div className="w-80 flex-shrink-0 self-stretch">
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-5 h-full flex flex-col">
             <div className="mb-6 px-2 pb-6 border-b border-slate-50">
               <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Authenticated as</p>
               <p className="text-sm font-black text-slate-900 truncate">{user?.name || 'Staff'}</p>
@@ -466,7 +466,7 @@ export default function DashboardClient({
             </div>
 
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2 text-center">Select Branches</h3>
-            <div className="px-2 mb-6">
+            <div className="px-2">
               <BranchMultiSelect selected={selectedBranches} onChange={setSelectedBranches} />
             </div>
           </div>
