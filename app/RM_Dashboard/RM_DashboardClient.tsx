@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ArrowLeft, Search, UserSearch, Package, Gift, Layers, Globe } from 'lucide-react';
-import BranchMultiSelect from '@/components/BranchMultiSelect';
 
 // --- NEW MASTER BRANCH CONFIGURATION ---
 type Region = 'A' | 'B' | 'C' | 'HQ';
@@ -273,10 +272,48 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                 ))}
               </div>
 
-              {/* BRANCH MULTI-SELECT - UPDATED */}
-              <div className="flex items-center gap-3">
-                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Branches:</label>
-                <BranchMultiSelect selected={activeBranches} onChange={setActiveBranches} />
+              {/* BRANCH LIST - MULTI-SELECT */}
+              <div>
+                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-2">Branches</label>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-[280px] overflow-y-auto">
+                  {/* All Branches Option */}
+                  <button
+                    onClick={() => setActiveBranches([])}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold mb-2 transition-all ${activeBranches.length === 0 ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                  >
+                    All Branches
+                  </button>
+                  
+                  {/* Individual Branches */}
+                  <div className="space-y-1">
+                    {BRANCH_LIST.map(branch => (
+                      <button
+                        key={branch.code}
+                        onClick={() => {
+                          if (activeBranches.includes(branch.code)) {
+                            setActiveBranches(activeBranches.filter(c => c !== branch.code));
+                          } else {
+                            setActiveBranches([...activeBranches, branch.code]);
+                          }
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+                          activeBranches.includes(branch.code)
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center text-[10px] ${
+                          activeBranches.includes(branch.code)
+                            ? 'bg-blue-500 border-blue-600'
+                            : 'border-slate-300'
+                        }`}>
+                          {activeBranches.includes(branch.code) && '✓'}
+                        </span>
+                        {branch.code}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
