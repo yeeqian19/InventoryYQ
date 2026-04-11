@@ -275,7 +275,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
               {/* BRANCH LIST - MULTI-SELECT */}
               <div>
                 <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-2">Branches</label>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-[280px] overflow-y-auto">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-[600px] overflow-y-auto">
                   {/* All Branches Option */}
                   <button
                     onClick={() => setActiveBranches([])}
