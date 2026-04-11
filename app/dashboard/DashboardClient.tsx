@@ -456,18 +456,59 @@ export default function DashboardClient({
       {/* CONTENT AREA (offset by sidebar width) */}
       <div className="ml-72 flex-1 grid grid-cols-[320px_1fr] gap-8 p-6 bg-[#fcfdfd]">
 
-        {/* WHITE FILTER PANEL — same grid row so it naturally matches height */}
+        {/* WHITE FILTER PANEL — inline multi-select, no dropdown */}
         <div className="row-start-1 row-end-3">
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-5 h-full flex flex-col">
-            <div className="mb-6 px-2 pb-6 border-b border-slate-50">
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-5 h-full flex flex-col overflow-hidden">
+            {/* Auth info */}
+            <div className="mb-6 px-2 pb-6 border-b border-slate-50 shrink-0">
               <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Authenticated as</p>
               <p className="text-sm font-black text-slate-900 truncate">{user?.name || 'Staff'}</p>
               <p className="text-[9px] font-bold text-slate-400 uppercase">{user?.role || 'User'}</p>
             </div>
 
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 px-2 text-center">Select Branches</h3>
-            <div className="px-2">
-              <BranchMultiSelect selected={selectedBranches} onChange={setSelectedBranches} />
+            {/* Region tabs */}
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-2 text-center shrink-0">Region Filter</h3>
+            <div className="grid grid-cols-4 gap-1 mb-4 bg-slate-100 p-1 rounded-xl shrink-0">
+              {(['ALL', 'A', 'B', 'C'] as const).map((r) => (
+                <button key={r} onClick={() => { setActiveRegion(r); setSelectedBranches([]); }}
+                  className={`py-1.5 rounded-lg text-[10px] font-black transition-all ${activeRegion === r ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+
+            {/* Branch list — scrollable, multi-select with checkboxes */}
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-2 text-center shrink-0">Branches</h3>
+            <div className="flex-1 overflow-y-auto flex flex-col gap-1 no-scrollbar">
+              {/* All Branches button */}
+              <button
+                onClick={() => setSelectedBranches([])}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${selectedBranches.length === 0 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'text-slate-500 hover:bg-slate-50'}`}
+              >
+                <span className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${selectedBranches.length === 0 ? 'border-white bg-white/30' : 'border-slate-300'}`}>
+                  {selectedBranches.length === 0 && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
+                </span>
+                All Branches
+              </button>
+
+              {BRANCHES_TO_SHOW.filter(b => b !== 'All Branches').map((branch) => {
+                const isSelected = selectedBranches.includes(branch);
+                const toggle = () => {
+                  setSelectedBranches(prev =>
+                    prev.includes(branch) ? prev.filter(b => b !== branch) : [...prev, branch]
+                  );
+                };
+                return (
+                  <button key={branch} onClick={toggle}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs transition-all ${isSelected ? 'bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-100' : 'text-slate-500 hover:bg-slate-50 font-semibold'}`}
+                  >
+                    <span className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'border-white bg-white/30' : 'border-slate-300'}`}>
+                      {isSelected && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
+                    </span>
+                    {branch}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
