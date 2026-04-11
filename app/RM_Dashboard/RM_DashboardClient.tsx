@@ -309,12 +309,12 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
         </div>
 
         {/* MAIN CONTENT LAYOUT WITH SIDEBAR */}
-        <div className="flex gap-8 mb-12">
+        <div className="flex gap-8">
           
           {/* LEFT SIDEBAR - BRANCH SELECTOR */}
-          <div className="w-64 hidden lg:flex flex-col bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 h-fit sticky top-8">
+          <div className="w-64 hidden lg:flex flex-col bg-slate-50 p-6 h-screen overflow-y-auto sticky top-0">
             {/* HEADER */}
-            <div className="mb-6 pb-6 border-b border-slate-100">
+            <div className="mb-6 pb-6 border-b border-slate-200">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Authenticated As</p>
               <p className="text-xl font-black text-slate-900">OD</p>
               <p className="text-[9px] font-bold text-slate-400 uppercase">SUPERADMIN</p>
@@ -324,11 +324,11 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Select Branches</p>
 
             {/* BRANCHES LIST */}
-            <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto max-h-[500px]">
+            <div className="flex flex-col gap-2 overflow-visible">
               {/* All Branches Option */}
               <button
                 onClick={() => setActiveBranches([])}
-                className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeBranches.length === 0 ? 'bg-emerald-500 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${activeBranches.length === 0 ? 'bg-emerald-500 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
               >
                 All Branches
               </button>
@@ -347,7 +347,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                   className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${
                     activeBranches.includes(branch.code)
                       ? 'bg-blue-500 text-white'
-                      : 'text-slate-600 hover:bg-slate-50'
+                      : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
                   {branch.code}
