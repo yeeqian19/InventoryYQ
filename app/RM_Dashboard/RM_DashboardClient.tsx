@@ -271,50 +271,6 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                   <button key={t} onClick={() => setActiveType(t as 'ALL' | 'NEW' | 'RENEWAL' | 'TRIAL')} className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all ${activeType === t ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>{t}</button>
                 ))}
               </div>
-
-              {/* BRANCH LIST - MULTI-SELECT */}
-              <div>
-                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-2">Branches</label>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-[600px] overflow-y-auto">
-                  {/* All Branches Option */}
-                  <button
-                    onClick={() => setActiveBranches([])}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold mb-2 transition-all ${activeBranches.length === 0 ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}
-                  >
-                    All Branches
-                  </button>
-                  
-                  {/* Individual Branches */}
-                  <div className="space-y-1">
-                    {BRANCH_LIST.map(branch => (
-                      <button
-                        key={branch.code}
-                        onClick={() => {
-                          if (activeBranches.includes(branch.code)) {
-                            setActiveBranches(activeBranches.filter(c => c !== branch.code));
-                          } else {
-                            setActiveBranches([...activeBranches, branch.code]);
-                          }
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
-                          activeBranches.includes(branch.code)
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center text-[10px] ${
-                          activeBranches.includes(branch.code)
-                            ? 'bg-blue-500 border-blue-600'
-                            : 'border-slate-300'
-                        }`}>
-                          {activeBranches.includes(branch.code) && '✓'}
-                        </span>
-                        {branch.code}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -352,7 +308,56 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
           </ResponsiveContainer>
         </div>
 
-        {/* SEARCH AREA */}
+        {/* MAIN CONTENT LAYOUT WITH SIDEBAR */}
+        <div className="flex gap-8 mb-12">
+          
+          {/* LEFT SIDEBAR - BRANCH SELECTOR */}
+          <div className="w-64 hidden lg:flex flex-col bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 h-fit sticky top-8">
+            {/* HEADER */}
+            <div className="mb-6 pb-6 border-b border-slate-100">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Authenticated As</p>
+              <p className="text-xl font-black text-slate-900">OD</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase">SUPERADMIN</p>
+            </div>
+
+            {/* BRANCH SELECTOR LABEL */}
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Select Branches</p>
+
+            {/* BRANCHES LIST */}
+            <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto max-h-[500px]">
+              {/* All Branches Option */}
+              <button
+                onClick={() => setActiveBranches([])}
+                className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all ${activeBranches.length === 0 ? 'bg-emerald-500 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                All Branches
+              </button>
+              
+              {/* Individual Branches */}
+              {BRANCH_LIST.map(branch => (
+                <button
+                  key={branch.code}
+                  onClick={() => {
+                    if (activeBranches.includes(branch.code)) {
+                      setActiveBranches(activeBranches.filter(c => c !== branch.code));
+                    } else {
+                      setActiveBranches([...activeBranches, branch.code]);
+                    }
+                  }}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                    activeBranches.includes(branch.code)
+                      ? 'bg-blue-500 text-white'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {branch.code}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT CONTENT AREA */}
+          <div className="flex-1">
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
@@ -417,6 +422,8 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
           </div>
         </div>
       </div>
