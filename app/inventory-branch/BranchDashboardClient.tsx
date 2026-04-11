@@ -156,7 +156,7 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
   // --- LIVE DATA LOGIC ---
   const branchData = useMemo(() => initialData?.filter(item => item.branch === activeBranch) || [], [initialData, activeBranch]);
 
-  const expectedFromHQ = branchData.filter(item => ((item.skPrep && item.skBarcode) || (item.egPrep && item.egBarcode)) && !item.bmPickup).length;
+  const expectedFromHQ = branchData.filter(item => ((item.skPrep && item.skBarcode) || (item.egPrep && item.egBarcode)) && !item.bmPickup && !item.studentReceived).length;
   const readyAtBranch = branchData.filter(item => item.bmPickup && !item.studentReceived).length;
   const completed = branchData.filter(item => item.studentReceived).length;
 
