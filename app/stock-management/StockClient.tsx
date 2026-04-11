@@ -221,7 +221,7 @@ async function handleSaveEdit() {
           )}
           {canEdit && (
             <th className="pb-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-              Quick Adjust
+              Received
             </th>
           )}
           {canEdit && (
@@ -325,11 +325,12 @@ async function handleSaveEdit() {
           </td>
         )}
 
-        {/* QUICK ADJUST — receive from ordered */}
+        {/* RECEIVED — receive from ordered */}
         {canEdit && (
           <td className="py-3 px-4 text-center">
             <div className="flex flex-col items-center gap-1.5">
               <span className="text-[8px] text-slate-400 font-black uppercase">Ordered: {item.orderedCount}</span>
+              <span className="text-[8px] text-emerald-600 font-black uppercase tracking-widest">Received Qty</span>
               <div className="flex gap-1">
                 <input type="number" placeholder="qty"
                   value={rowQty.receive[item.id] || ''}
@@ -339,7 +340,7 @@ async function handleSaveEdit() {
                 <button onClick={() => handleStockAction('receive', item.id)}
                   disabled={!rowQty.receive[item.id] || item.orderedCount === 0}
                   className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 disabled:opacity-30 text-[9px] font-black uppercase rounded-lg transition-colors">
-                  Recv
+                  Receive
                 </button>
               </div>
             </div>
