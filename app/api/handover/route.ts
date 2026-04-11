@@ -60,6 +60,7 @@ export async function POST(req: Request): Promise<NextResponse> {
         student_received: false,
       },
       data: {
+        bm_pickup: true,
         student_received: true,
         student_received_date: new Date(),
         proof_photo: webViewLink,

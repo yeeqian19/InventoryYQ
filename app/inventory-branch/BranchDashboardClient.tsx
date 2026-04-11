@@ -164,7 +164,7 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
     let queue: InventoryItem[] = [];
 
     if (activeMode === 'PICKUP') {
-      queue = branchData.filter(item => ((item.skPrep && item.skBarcode) || (item.egPrep && item.egBarcode)) && !item.bmPickup);
+      queue = branchData.filter(item => ((item.skPrep && item.skBarcode) || (item.egPrep && item.egBarcode)) && !item.bmPickup && !item.studentReceived);
     } else if (activeMode === 'HANDOVER') {
       queue = branchData.filter(item => item.bmPickup && !item.studentReceived);
     } else if (activeMode === 'HISTORY') {
