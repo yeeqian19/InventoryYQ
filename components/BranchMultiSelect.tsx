@@ -107,7 +107,7 @@ export default function BranchMultiSelect({ selected, onChange, className = '' }
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 bg-emerald-50 rounded-xl px-5 py-3 text-sm font-black text-emerald-700 justify-between focus:outline-none"
+        className="flex items-center gap-2 bg-emerald-50 rounded-xl px-5 py-3 text-sm font-black text-emerald-700 min-w-[180px] justify-between focus:outline-none"
       >
         <span className="truncate">{label}</span>
         <svg className={`w-4 h-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

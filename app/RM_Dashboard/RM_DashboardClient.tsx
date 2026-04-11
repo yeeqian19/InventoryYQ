@@ -274,11 +274,9 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
               </div>
 
               {/* BRANCH MULTI-SELECT - UPDATED */}
-              <div className="w-full">
-                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-2">Select Branches</label>
-                <div className="w-full">
-                  <BranchMultiSelect selected={activeBranches} onChange={setActiveBranches} />
-                </div>
+              <div className="flex items-center gap-3">
+                <label className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Branches:</label>
+                <BranchMultiSelect selected={activeBranches} onChange={setActiveBranches} />
               </div>
             </div>
           </div>
