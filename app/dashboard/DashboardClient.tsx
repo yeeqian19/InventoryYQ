@@ -89,6 +89,13 @@ export default function DashboardClient({
   const [mobileTab, setMobileTab] = useState<MobileTab>('overview');
 
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]); // [] = All Branches
+  const [activeRegion, setActiveRegion] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
+
+  const BRANCHES_TO_SHOW = useMemo(() => {
+    if (activeRegion === 'ALL') return BRANCH_MASTER_LIST.map(b => b.code);
+    return BRANCH_MASTER_LIST.filter(b => b.region === activeRegion).map(b => b.code);
+  }, [activeRegion]);
+
   const [selectedType, setSelectedType] = useState('NEW');
   const [quickDate, setQuickDate] = useState('all');
 
@@ -597,6 +604,7 @@ export default function DashboardClient({
           </div>
         </div>
       </div>
+      </div>
     </div>
   );
 
@@ -607,3 +615,4 @@ export default function DashboardClient({
     </>
   );
 }
+
