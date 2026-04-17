@@ -105,7 +105,7 @@ export default function Sidebar() {
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all group no-underline text-white"
           >
             <span className="text-lg group-hover:-translate-x-1 transition-transform">⬅️</span>
-            <span className="text-[10px] font-black uppercase tracking-[0.15em]">Control Panel</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.15em]">Inventory Management</span>
           </Link>
         </div>
 

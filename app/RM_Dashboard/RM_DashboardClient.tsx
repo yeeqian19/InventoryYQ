@@ -216,7 +216,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
           <div className="flex flex-col gap-6">
             <button onClick={() => router.push('/')} className="group flex items-center gap-3 bg-white px-5 py-2.5 rounded-xl border border-slate-200 shadow-sm hover:border-slate-900 transition-all w-fit no-underline">
               <ArrowLeft size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Control Panel</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">Inventory Management</span>
             </button>
 
             <div>

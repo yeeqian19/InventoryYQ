@@ -421,7 +421,7 @@ export default function DashboardClient({
 
         <div className="px-4 mb-4">
           <Link href="/" className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors border border-white/10 no-underline text-white">
-            <span>⬅️</span> Control Panel
+            <span>⬅️</span> Inventory Management
           </Link>
         </div>
 

@@ -407,7 +407,7 @@ async function handleSaveEdit() {
       {/* Back */}
       <div className="mb-6">
         <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-slate-500 bg-white border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 transition-all no-underline">
-          ← Control Panel
+          ← Inventory Management
         </Link>
       </div>
 

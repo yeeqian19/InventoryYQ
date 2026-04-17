@@ -27,6 +27,9 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
   const [typeFilter, setTypeFilter] = useState('New'); 
   const [quickDate, setQuickDate] = useState('thisWeek');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [renamingBarcode, setRenamingBarcode] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [nameOverrides, setNameOverrides] = useState<Record<string, string>>({});
   
   // Date Helpers
   const formatDateForInput = (date: Date) => {
@@ -175,6 +178,22 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
 
   const handleClearSelection = () => setSelectedIds([]);
 
+  const handleRename = async (skBarcode: string, newName: string) => {
+    if (!newName.trim()) return;
+    const res = await fetch('/api/students/rename', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barcode: skBarcode, newName: newName.trim() }),
+    });
+    if (res.ok) {
+      setNameOverrides(prev => ({ ...prev, [skBarcode]: newName.trim() }));
+      setRenamingBarcode(null);
+    } else {
+      const data = await res.json();
+      alert(data.error || 'Failed to rename student');
+    }
+  };
+
   const getPackageColor = (pkg: string | null) => {
     if (!pkg) return 'bg-slate-100 text-slate-500';
     if (pkg.includes('12M')) return 'bg-purple-100 text-purple-700';
@@ -288,7 +307,31 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
                   <tr key={student.student_id} className={`${isSelected ? 'bg-blue-50/20' : ''} hover:bg-slate-50/30 transition-colors`}>
                     <td className="px-6 py-6 text-center"><input type="checkbox" checked={isSelected} onChange={() => toggleStudent(student.student_id)} className="w-4 h-4 rounded" /></td>
                     <td className="px-6 py-6 font-bold text-slate-900 leading-tight">
-                      {student.name}
+                      {renamingBarcode === student.skBarcode ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            autoFocus
+                            type="text"
+                            value={renameValue}
+                            onChange={e => setRenameValue(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleRename(student.skBarcode, renameValue); if (e.key === 'Escape') setRenamingBarcode(null); }}
+                            className="border border-blue-400 rounded-lg px-2 py-1 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-300 w-40"
+                          />
+                          <button onClick={() => handleRename(student.skBarcode, renameValue)} className="px-2 py-1 bg-blue-500 text-white text-[9px] font-black rounded-lg uppercase">Save</button>
+                          <button onClick={() => setRenamingBarcode(null)} className="px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg uppercase">Cancel</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 group">
+                          <span>{nameOverrides[student.skBarcode] || student.name}</span>
+                          <button
+                            onClick={() => { setRenamingBarcode(student.skBarcode); setRenameValue(nameOverrides[student.skBarcode] || student.name); }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-500"
+                            title="Rename student"
+                          >
+                            ✏️
+                          </button>
+                        </div>
+                      )}
                       <p className="text-[9px] font-normal text-slate-400 uppercase tracking-widest mt-1.5">
                         {student.studentType === 'NEW' ? 'New' : student.studentType === 'RENEWAL' ? 'Renewal' : student.studentType === 'TRIAL' ? 'Trial' : student.studentType}
                       </p>

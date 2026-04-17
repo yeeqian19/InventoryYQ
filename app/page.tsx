@@ -35,7 +35,7 @@ export default async function RootPage() {
         </div>
 
         <h1 className="text-2xl sm:text-4xl font-bold text-slate-800 mb-2 text-center tracking-tight">
-          Inventory Control Panel
+          Inventory Management
         </h1>
         <p className="text-base sm:text-lg text-slate-400 mb-10 text-center">
           Welcome back, {userName}
