@@ -184,17 +184,30 @@ async function handleSaveEdit() {
 
   async function handleBuyNow(item: StockItem) {
     if (item.link) window.open(item.link, '_blank');
-    if (!item.supplierEmail) return;
-    await fetch('/api/stock/buy-now', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        itemName: item.name,
-        needQty: item.neededCount,
-        link: item.link,
-        supplierEmail: item.supplierEmail,
-      }),
-    });
+    if (!item.supplierEmail) {
+      alert(`No supplier email set for "${item.name}". Edit the item and add a Supplier Email first.`);
+      return;
+    }
+    try {
+      const res = await fetch('/api/stock/buy-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemName: item.name,
+          needQty: item.neededCount,
+          link: item.link,
+          supplierEmail: item.supplierEmail,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Email sent to ${item.supplierEmail} and finance team.`);
+      } else {
+        alert(`Email failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch {
+      alert('Failed to send email. Check internet connection.');
+    }
   }
 
   function openEdit(item: StockItem) {

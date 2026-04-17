@@ -11,31 +11,33 @@ export async function POST(req: Request) {
   try {
     const { itemName, needQty, link, supplierEmail } = await req.json();
 
-    if (!supplierEmail || !itemName) {
-      return NextResponse.json({ error: 'itemName and supplierEmail are required' }, { status: 400 });
+    if (!itemName) {
+      return NextResponse.json({ error: 'itemName is required' }, { status: 400 });
     }
 
     const financeEmail = process.env.FINANCE_EMAIL;
     const timestamp = new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' });
     const requestedBy = session.user?.name || session.user?.email || 'Staff';
 
-    // Email to supplier
-    const supplierHtml = generateEmailHTML({
-      title: `📦 Purchase Request — ${itemName}`,
-      detailsArray: [
-        { label: 'Item', value: itemName },
-        { label: 'Quantity Required', value: String(needQty) },
-        { label: 'Requested By', value: requestedBy },
-        { label: 'Date & Time', value: timestamp },
-        ...(link ? [{ label: 'Order Link', value: 'View Item', isLink: true, linkHref: link, linkText: 'View Item' }] : []),
-      ],
-    });
+    // Email to supplier (only if supplierEmail provided)
+    if (supplierEmail) {
+      const supplierHtml = generateEmailHTML({
+        title: `📦 Purchase Request — ${itemName}`,
+        detailsArray: [
+          { label: 'Item', value: itemName },
+          { label: 'Quantity Required', value: String(needQty) },
+          { label: 'Requested By', value: requestedBy },
+          { label: 'Date & Time', value: timestamp },
+          ...(link ? [{ label: 'Order Link', value: 'View Item', isLink: true, linkHref: link, linkText: 'View Item' }] : []),
+        ],
+      });
 
-    await sendEmail({
-      to: supplierEmail,
-      subject: `📦 Purchase Request: ${needQty} units of ${itemName}`,
-      html: supplierHtml,
-    });
+      await sendEmail({
+        to: supplierEmail,
+        subject: `📦 Purchase Request: ${needQty} units of ${itemName}`,
+        html: supplierHtml,
+      });
+    }
 
     // Email to finance (if configured)
     if (financeEmail) {
