@@ -76,6 +76,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
   const [expandedBranch, setExpandedBranch] = useState<string | null>(null);
   const [branchSearch, setBranchSearch] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'not_prepared' | 'prepared' | 'bm_pickup' | 'received'>('ALL');
 
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -403,22 +404,43 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                     {expandedBranch === row.name && (
                       <tr className="bg-slate-50/40 border-t border-slate-100">
                         <td colSpan={5} className="px-12 py-10">
-                          <div className="flex gap-4 mb-4 flex-wrap">
+                          <div className="flex gap-2 mb-4 flex-wrap">
                             {[
-                              { color: '#fb7185', label: 'Not Prepared' },
-                              { color: '#10b981', label: 'Prepared' },
-                              { color: '#3b82f6', label: 'BM Pickup' },
-                              { color: '#a855f7', label: 'Received' },
-                            ].map(l => (
-                              <div key={l.label} className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: l.color }} />
-                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{l.label}</span>
-                              </div>
-                            ))}
+                              { key: 'ALL', color: '#94a3b8', label: 'All' },
+                              { key: 'not_prepared', color: '#fb7185', label: 'Not Prepared' },
+                              { key: 'prepared', color: '#10b981', label: 'Prepared' },
+                              { key: 'bm_pickup', color: '#3b82f6', label: 'BM Pickup' },
+                              { key: 'received', color: '#a855f7', label: 'Received' },
+                            ].map(l => {
+                              const active = statusFilter === l.key;
+                              return (
+                                <button
+                                  key={l.key}
+                                  onClick={() => setStatusFilter(l.key as typeof statusFilter)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 transition-all text-[9px] font-black uppercase tracking-widest"
+                                  style={{
+                                    borderColor: l.color,
+                                    backgroundColor: active ? l.color : 'white',
+                                    color: active ? 'white' : l.color,
+                                  }}
+                                >
+                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: active ? 'white' : l.color }} />
+                                  {l.label}
+                                </button>
+                              );
+                            })}
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             {row.list.length > 0 ? (
-                               row.list.map(s => {
+                               row.list.filter(s => {
+                                 if (statusFilter === 'ALL') return true;
+                                 const isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
+                                 if (statusFilter === 'received') return s.student_received;
+                                 if (statusFilter === 'bm_pickup') return s.bm_pickup && !s.student_received;
+                                 if (statusFilter === 'prepared') return isPrepared && !s.bm_pickup;
+                                 if (statusFilter === 'not_prepared') return !isPrepared;
+                                 return true;
+                               }).map(s => {
                                  const isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
                                  const cardColor = s.student_received ? '#a855f7' : s.bm_pickup ? '#3b82f6' : isPrepared ? '#10b981' : '#fb7185';
                                  return (
