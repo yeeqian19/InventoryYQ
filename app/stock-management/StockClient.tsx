@@ -19,6 +19,7 @@ interface StockItem {
   link: string | null;
   isSkPart: boolean;
   category: string;
+  supplierEmail: string | null;
 }
 
 interface StockClientProps {
@@ -67,7 +68,7 @@ export default function StockClient({ userRole, initialItems, initialPackedCount
   const [totalInput, setTotalInput] = useState('');
 
   const [editItem, setEditItem]         = useState<StockItem | null>(null);
-  const [editForm, setEditForm]         = useState({ threshold: 0, neededCount: 0, link: '', currentCount: 0, category: 'SK_ITEM' as Category });
+  const [editForm, setEditForm]         = useState({ threshold: 0, neededCount: 0, link: '', currentCount: 0, category: 'SK_ITEM' as Category, supplierEmail: '' });
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -161,6 +162,7 @@ async function handleSaveEdit() {
       link: editForm.link || null,
       currentCount: editForm.currentCount,
       category: editForm.category,
+      supplierEmail: editForm.supplierEmail || null,
     });
     if (updated) { updateItem(updated); setSidebarOpen(false); }
   }
@@ -180,9 +182,24 @@ async function handleSaveEdit() {
     if (result) setItems(prev => prev.filter(i => i.id !== id));
   }
 
+  async function handleBuyNow(item: StockItem) {
+    if (item.link) window.open(item.link, '_blank');
+    if (!item.supplierEmail) return;
+    await fetch('/api/stock/buy-now', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        itemName: item.name,
+        needQty: item.neededCount,
+        link: item.link,
+        supplierEmail: item.supplierEmail,
+      }),
+    });
+  }
+
   function openEdit(item: StockItem) {
     setEditItem(item);
-    setEditForm({ threshold: item.threshold, neededCount: item.neededCount, link: item.link ?? '', currentCount: item.currentCount, category: (item.category as Category) || 'SK_ITEM' });
+    setEditForm({ threshold: item.threshold, neededCount: item.neededCount, link: item.link ?? '', currentCount: item.currentCount, category: (item.category as Category) || 'SK_ITEM', supplierEmail: item.supplierEmail ?? '' });
     setSidebarOpen(true);
   }
 
@@ -277,10 +294,12 @@ async function handleSaveEdit() {
           </span>
           {isLow && item.link && (
             <div>
-              <a href={item.link} target="_blank" rel="noreferrer"
-                className="text-[9px] font-black uppercase tracking-wider underline underline-offset-2 text-rose-500">
+              <button
+                onClick={() => handleBuyNow(item)}
+                className="text-[9px] font-black uppercase tracking-wider underline underline-offset-2 text-rose-500 hover:text-rose-700"
+              >
                 Buy Now
-              </a>
+              </button>
             </div>
           )}
         </td>
@@ -690,7 +709,14 @@ async function handleSaveEdit() {
                 <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Supplier Link</label>
                 <input type="text" value={editForm.link}
                   onChange={e => setEditForm(p => ({ ...p, link: e.target.value }))}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-slate-400" />
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="https://..." />
+              </div>
+              <div>
+                <label className="block text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1.5">Supplier Email</label>
+                <input type="email" value={editForm.supplierEmail}
+                  onChange={e => setEditForm(p => ({ ...p, supplierEmail: e.target.value }))}
+                  className="w-full p-3 bg-blue-50 border border-blue-200 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 text-blue-700" placeholder="supplier@example.com" />
+                <p className="text-[9px] text-slate-400 font-bold mt-1">Email sent to this address when Buy Now is clicked</p>
               </div>
             </div>
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">

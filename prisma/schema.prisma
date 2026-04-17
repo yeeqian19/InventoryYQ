@@ -69,8 +69,9 @@ model Inventory {
   updatedAt    DateTime @updatedAt
   inCartCount  Int      @default(0)
   orderedCount Int      @default(0)
-  category     String   @default("SK_ITEM")
-  neededCount  Int      @default(0)
+  category      String   @default("SK_ITEM")
+  neededCount   Int      @default(0)
+  supplierEmail String?
 }
 
 model StarterKit {

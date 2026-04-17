@@ -17,7 +17,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   try {
     const body = await req.json();
-    const { action, qty, threshold, neededCount, link, currentCount, category } = body;
+    const { action, qty, threshold, neededCount, link, currentCount, category, supplierEmail } = body;
 
     if (action === 'checkout' || action === 'receive') {
       const item = await db.inventory.findUnique({ where: { id: itemId } });
@@ -56,7 +56,8 @@ export async function PATCH(req: Request, { params }: Params) {
           ...(neededCount  !== undefined && { neededCount }),
           ...(link         !== undefined && { link }),
           ...(currentCount !== undefined && { currentCount }),
-          ...(category     !== undefined && { category, isSkPart: category === 'SK_ITEM' }),
+          ...(category      !== undefined && { category, isSkPart: category === 'SK_ITEM' }),
+          ...(supplierEmail !== undefined && { supplierEmail }),
         },
       });
       return NextResponse.json(updated);
