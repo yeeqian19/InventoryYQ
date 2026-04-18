@@ -92,6 +92,9 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
   const [pendingPickupBarcode, setPendingPickupBarcode] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
 
+  // Success screen after each completed scan
+  const [successInfo, setSuccessInfo] = useState<{ name: string; mode: 'PICKUP' | 'HANDOVER' } | null>(null);
+
   // Form Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [quickDate, setQuickDate] = useState('all');
@@ -198,18 +201,15 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
   }, [pendingHandoverBarcode, pendingPickupBarcode, branchData]);
 
   // --- FAST SYNC WITH OPTIMISTIC UI ---
-  const handleFastSync = async (endpoint: string, payload: Record<string, unknown>) => {
+  const handleFastSync = async (endpoint: string, payload: Record<string, unknown>, studentName?: string) => {
     // OPTIMISTIC UI UPDATE - Apply FIRST before network request
+    const completedMode = activeMode as 'PICKUP' | 'HANDOVER';
+    const completedName = studentName || pendingStudentName;
     setPendingHandoverBarcode('');
     setPendingPickupBarcode('');
     setCapturedPhoto(null);
-    setIsCameraOpen(true); // Re-open scanner for next item immediately
-    setScanMessage({ text: '🚀 Processing in background...', type: 'success' });
-    
-    // Clear message after 1500ms
-    setTimeout(() => {
-      setScanMessage({ text: '', type: '' });
-    }, 1500);
+    setSuccessInfo({ name: completedName, mode: completedMode });
+    setScanMessage({ text: '', type: '' });
 
     // Background network request
     try {
@@ -252,7 +252,7 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
       base64Data: photoBase64,
       barcode,
       branchCode: activeBranch,
-    });
+    }, pendingStudentName);
     
     setIsProcessing(false);
   };
@@ -270,7 +270,7 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
       barcode,
       studentName: student?.name || barcode,
       branchCode: activeBranch,
-    });
+    }, student?.name || barcode);
     
     setIsProcessing(false);
   };
@@ -385,7 +385,24 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
                 </div>
               )}
 
-              {isViewOnly ? (
+              {successInfo ? (
+                <div className="flex flex-col items-center p-8 text-center mt-6 w-full">
+                  <div className="w-28 h-28 rounded-full flex items-center justify-center mb-6 bg-emerald-50">
+                    <span className="text-6xl">✅</span>
+                  </div>
+                  <h3 className="text-xl font-black text-emerald-600 uppercase tracking-widest mb-1">Done!</h3>
+                  <p className="text-sm font-black text-slate-800 uppercase tracking-wider mb-1">{successInfo.name}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">
+                    {successInfo.mode === 'HANDOVER' ? 'Handover recorded successfully' : 'BM Pickup recorded successfully'}
+                  </p>
+                  <button
+                    onClick={() => { setSuccessInfo(null); setIsCameraOpen(true); }}
+                    className="px-10 py-4 rounded-xl text-sm font-black uppercase text-white bg-emerald-500 shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
+                  >
+                    Scan Next Student
+                  </button>
+                </div>
+              ) : isViewOnly ? (
                 <div className="flex flex-col items-center p-8 text-center mt-6">
                   <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 bg-slate-100 text-slate-400">
                     <span className="text-4xl">🔒</span>
