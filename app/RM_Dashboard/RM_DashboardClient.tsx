@@ -168,28 +168,22 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
 
     return finalBranches.map(branch => {
       const students = filtered.filter(s => s.branch === branch.code);
-      let bTarget = 0; let bPrep = 0; let bPickup = 0; let bReceived = 0;
-
-      students.forEach(s => {
-        if (s.hasSK && (itemToggle === 'ALL' || itemToggle === 'SK')) {
-          bTarget += 1;
-          if (s.sk_prep) bPrep += 1;
-          if (s.bm_pickup && !s.student_received) bPickup += 1;
-          if (s.student_received) bReceived += 1;
-        }
-        if (s.hasEG && (itemToggle === 'ALL' || itemToggle === 'EG')) {
-          bTarget += 1;
-          if (s.eg_prep) bPrep += 1;
-          if (s.bm_pickup && !s.student_received) bPickup += 1;
-          if (s.student_received) bReceived += 1;
-        }
-      });
 
       const displayedList = students.filter(s => {
         if (itemToggle === 'SK') return s.hasSK;
         if (itemToggle === 'EG') return s.hasEG;
         return s.hasSK || s.hasEG;
       });
+
+      // Count students (not items) so numbers match the cards
+      const bTarget = displayedList.length;
+      const bPrep = displayedList.filter(s => {
+        if (itemToggle === 'EG') return s.eg_prep;
+        if (itemToggle === 'SK') return s.sk_prep;
+        return (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
+      }).length;
+      const bPickup = displayedList.filter(s => s.bm_pickup && !s.student_received).length;
+      const bReceived = displayedList.filter(s => s.student_received).length;
 
       return { 
         name: branch.code, 
@@ -442,8 +436,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                             });
                             return (
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                                Showing <span className="text-slate-700">{filtered.length}</span> student{filtered.length !== 1 ? 's' : ''}
-                                {statusFilter !== 'ALL' && <span className="text-slate-400"> — note: header counts track items (SK+EG separately)</span>}
+                                Showing <span className="text-slate-700">{filtered.length}</span> of <span className="text-slate-700">{row.list.length}</span> student{row.list.length !== 1 ? 's' : ''}
                               </p>
                             );
                           })()}
