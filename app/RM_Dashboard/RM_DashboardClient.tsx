@@ -174,13 +174,13 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
         if (s.hasSK && (itemToggle === 'ALL' || itemToggle === 'SK')) {
           bTarget += 1;
           if (s.sk_prep) bPrep += 1;
-          if (s.bm_pickup) bPickup += 1;
+          if (s.bm_pickup && !s.student_received) bPickup += 1;
           if (s.student_received) bReceived += 1;
         }
         if (s.hasEG && (itemToggle === 'ALL' || itemToggle === 'EG')) {
           bTarget += 1;
           if (s.eg_prep) bPrep += 1;
-          if (s.bm_pickup) bPickup += 1;
+          if (s.bm_pickup && !s.student_received) bPickup += 1;
           if (s.student_received) bReceived += 1;
         }
       });
@@ -430,6 +430,23 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                               );
                             })}
                           </div>
+                          {(() => {
+                            const filtered = row.list.filter(s => {
+                              if (statusFilter === 'ALL') return true;
+                              const isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
+                              if (statusFilter === 'received') return s.student_received;
+                              if (statusFilter === 'bm_pickup') return s.bm_pickup && !s.student_received;
+                              if (statusFilter === 'prepared') return isPrepared && !s.bm_pickup;
+                              if (statusFilter === 'not_prepared') return !isPrepared;
+                              return true;
+                            });
+                            return (
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                Showing <span className="text-slate-700">{filtered.length}</span> student{filtered.length !== 1 ? 's' : ''}
+                                {statusFilter !== 'ALL' && <span className="text-slate-400"> — note: header counts track items (SK+EG separately)</span>}
+                              </p>
+                            );
+                          })()}
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             {row.list.length > 0 ? (
                                row.list.filter(s => {
