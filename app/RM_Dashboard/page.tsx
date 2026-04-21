@@ -11,6 +11,7 @@ export const revalidate = 0;
 // Helper function to fetch and transform data
 async function fetchDashboardData() {
   const data = await prisma.inventory_distribution_new.findMany({
+    where: { is_active: true },
     select: {
       student_id: true,
       student_name: true,

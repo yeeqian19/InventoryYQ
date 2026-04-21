@@ -30,6 +30,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     // 1. Initial Check: Find the record to validate and get data for the logger
     const record = await db.inventory_distribution_new.findFirst({
       where: {
+        is_active: true,
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },
           { barcode_eg: { equals: barcode, mode: 'insensitive' } },

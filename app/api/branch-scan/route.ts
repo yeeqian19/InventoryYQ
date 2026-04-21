@@ -40,6 +40,7 @@ export async function POST(req: Request): Promise<NextResponse<BranchScanRespons
 
     const record = await db.inventory_distribution_new.findFirst({
       where: {
+        is_active: true,
         OR: [
           { barcode_sk: { equals: barcode, mode: 'insensitive' } },
           { barcode_eg: { equals: barcode, mode: 'insensitive' } }

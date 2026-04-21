@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function StudentManagerPage() {
   const rawStudents = await db.inventory_distribution_new.findMany({
+    where: { is_active: true },
     select: {
       student_id: true,
       student_name: true,

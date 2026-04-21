@@ -20,8 +20,8 @@ export default async function InventoryBranchPage() {
   // USER_BM → see only their assigned branch
   const roleFilter =
     role === 'SUPERADMIN' || role === 'ADMIN_HQ' || role === 'USER_RM'
-      ? { OR: [{ sk_prep: true }, { eg_prep: true }] }
-      : { branch_code: branchCode, OR: [{ sk_prep: true }, { eg_prep: true }] };
+      ? { is_active: true, OR: [{ sk_prep: true }, { eg_prep: true }] }
+      : { is_active: true, branch_code: branchCode, OR: [{ sk_prep: true }, { eg_prep: true }] };
 
   const rawData = await db.inventory_distribution_new.findMany({
     select: {

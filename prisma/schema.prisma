@@ -28,6 +28,7 @@ model inventory_distribution_new {
   barcode_eg            String?   @default(dbgenerated("\nCASE\n    WHEN (((package)::text ~~* '9M%'::text) OR ((package)::text ~~* '12M%'::text)) THEN (((branch_code)::text || '-EG-'::text) || lpad((student_id)::text, 6, '0'::text))\n    ELSE NULL::text\nEND")) @db.VarChar(255)
   proof_photo           String?
   bm_pickup_photo       String?
+  is_active             Boolean   @default(true)
 
   @@unique([doc_no, student_name])
 }
