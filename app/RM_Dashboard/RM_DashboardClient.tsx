@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowLeft, Search, UserSearch, Package, Gift, Layers, Globe } from 'lucide-react';
+import { ArrowLeft, Search, UserSearch, Package, Gift, Layers } from 'lucide-react';
 
 // --- NEW MASTER BRANCH CONFIGURATION ---
 type Region = 'A' | 'B' | 'C' | 'HQ';
@@ -439,7 +439,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                               if (statusFilter === 'received') return s.student_received;
                               if (statusFilter === 'bm_pickup') return s.bm_pickup && !s.student_received;
                               if (statusFilter === 'prepared') return isPrepared && !s.bm_pickup;
-                              if (statusFilter === 'not_prepared') return !isPrepared;
+                              if (statusFilter === 'not_prepared') return !isPrepared && !s.bm_pickup && !s.student_received;
                               return true;
                             });
                             return (
@@ -456,7 +456,7 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                                  if (statusFilter === 'received') return s.student_received;
                                  if (statusFilter === 'bm_pickup') return s.bm_pickup && !s.student_received;
                                  if (statusFilter === 'prepared') return isPrepared && !s.bm_pickup;
-                                 if (statusFilter === 'not_prepared') return !isPrepared;
+                                 if (statusFilter === 'not_prepared') return !isPrepared && !s.bm_pickup && !s.student_received;
                                  return true;
                                }).map(s => {
                                  const isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
