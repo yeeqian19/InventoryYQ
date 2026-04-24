@@ -49,23 +49,32 @@ type StudentData = {
   name: string;
   branch: string;
   sk_prep: boolean;
+  sk_prep_date?: string;
   eg_prep: boolean;
+  eg_prep_date?: string;
   bm_pickup: boolean;
+  bm_pickup_date?: string;
   student_received: boolean;
+  student_received_date?: string;
   type: string;
   package: string;
-  hasSK: boolean; 
-  hasEG: boolean; 
-  giftType?: string | null; 
+  hasSK: boolean;
+  hasEG: boolean;
+  giftType?: string | null;
   created_at?: string;
 };
 
-// Pure utility — defined outside component so it's stable across renders
 function toDateString(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function fmtDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: '2-digit' });
 }
 
 export default function RM_DashboardClient({ initialData }: { initialData: StudentData[] }) {
@@ -178,9 +187,8 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
       // Count students (not items) so numbers match the cards
       const bTarget = displayedList.length;
       const bPrep = displayedList.filter(s => {
-        if (itemToggle === 'EG') return s.eg_prep;
-        if (itemToggle === 'SK') return s.sk_prep;
-        return (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
+        const isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
+        return isPrepared && !s.bm_pickup;
       }).length;
       const bPickup = displayedList.filter(s => s.bm_pickup && !s.student_received).length;
       const bReceived = displayedList.filter(s => s.student_received).length;
@@ -453,10 +461,18 @@ export default function RM_DashboardClient({ initialData }: { initialData: Stude
                                }).map(s => {
                                  const isPrepared = itemToggle === 'EG' ? s.eg_prep : itemToggle === 'SK' ? s.sk_prep : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
                                  const cardColor = s.student_received ? '#a855f7' : s.bm_pickup ? '#3b82f6' : isPrepared ? '#10b981' : '#fb7185';
+                                 const stageLabel = s.student_received ? 'Received' : s.bm_pickup ? 'Picked Up' : isPrepared ? 'Prepared' : null;
+                                 const stageDate = s.student_received ? fmtDate(s.student_received_date) : s.bm_pickup ? fmtDate(s.bm_pickup_date) : isPrepared ? fmtDate(s.sk_prep_date || s.eg_prep_date) : null;
                                  return (
                                   <div key={s.student_id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-2 border-l-8" style={{ borderLeftColor: cardColor }}>
                                     <span className="text-[11px] font-black text-slate-700 truncate uppercase tracking-tighter">{s.name}</span>
                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">{s.package}</span>
+                                    {stageLabel && stageDate && (
+                                      <div className="flex flex-col gap-0.5 mt-1 pt-2 border-t border-slate-100">
+                                        <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: cardColor }}>{stageLabel}</span>
+                                        <span className="text-[9px] font-bold text-slate-500">{stageDate}</span>
+                                      </div>
+                                    )}
                                   </div>
                                  );
                                })
