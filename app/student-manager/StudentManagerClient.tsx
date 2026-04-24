@@ -17,19 +17,21 @@ type Student = {
   package: string | null; 
 };
 
-export default function StudentManagerClient({ initialData }: { initialData: Student[] }) {
+export default function StudentManagerClient({ initialData, canDelete = false }: { initialData: Student[]; canDelete?: boolean }) {
   const [hasMounted, setHasMounted] = useState(false);
 
   // --- STATE ---
   const [activeSystem, setActiveSystem] = useState<'SK' | 'EG'>('SK');
-  const [searchTerm, setSearchTerm] = useState(''); 
+  const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState<string[]>([]); // [] = All Branches
-  const [typeFilter, setTypeFilter] = useState('New'); 
+  const [typeFilter, setTypeFilter] = useState('New');
   const [quickDate, setQuickDate] = useState('thisWeek');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [renamingBarcode, setRenamingBarcode] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [nameOverrides, setNameOverrides] = useState<Record<string, string>>({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletedDbIds, setDeletedDbIds] = useState<Set<number>>(new Set());
   
   // Date Helpers
   const formatDateForInput = (date: Date) => {
@@ -132,10 +134,10 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
 
   // 🟢 THIS IS THE FIXED BLOCK 🟢
   const filteredStudents = useMemo(() => {
-    let data = processedInitialData; 
-    
+    let data = processedInitialData.filter(s => !deletedDbIds.has(parseInt(s.student_id.split('-')[0])));
+
     // 1. Filter out missing barcodes
-    data = data.filter(s => { 
+    data = data.filter(s => {
       const code = activeSystem === 'SK' ? s.skBarcode : s.egBarcode; 
       return code && code !== 'N/A' && code.trim() !== ''; 
     });
@@ -168,7 +170,7 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
     }
     
     return data;
-  }, [activeFilter, processedInitialData, searchTerm, activeSystem]);
+  }, [activeFilter, processedInitialData, searchTerm, activeSystem, deletedDbIds]);
   // 🟢 END OF FIXED BLOCK 🟢
 
   const selectedStudentsForPrint = useMemo(() => filteredStudents.filter(s => selectedIds.includes(s.student_id)), [selectedIds, filteredStudents]);
@@ -191,6 +193,19 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
     } else {
       const data = await res.json();
       alert(data.error || 'Failed to rename student');
+    }
+  };
+
+  const handleDelete = async (studentId: string) => {
+    const baseId = parseInt(studentId.split('-')[0]);
+    const res = await fetch(`/api/students/${baseId}`, { method: 'DELETE' });
+    if (res.ok) {
+      setDeletedDbIds(prev => new Set([...prev, baseId]));
+      setSelectedIds(prev => prev.filter(id => parseInt(id.split('-')[0]) !== baseId));
+      setConfirmDeleteId(null);
+    } else {
+      const data = await res.json();
+      alert(data.error || 'Failed to delete student');
     }
   };
 
@@ -320,6 +335,12 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
                           <button onClick={() => handleRename(student.skBarcode, renameValue)} className="px-2 py-1 bg-blue-500 text-white text-[9px] font-black rounded-lg uppercase">Save</button>
                           <button onClick={() => setRenamingBarcode(null)} className="px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg uppercase">Cancel</button>
                         </div>
+                      ) : confirmDeleteId === student.student_id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-rose-600">Delete this student?</span>
+                          <button onClick={() => handleDelete(student.student_id)} className="px-2 py-1 bg-rose-500 text-white text-[9px] font-black rounded-lg uppercase">Yes, Delete</button>
+                          <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg uppercase">Cancel</button>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2 group">
                           <span>{nameOverrides[student.skBarcode] || student.name}</span>
@@ -330,6 +351,15 @@ export default function StudentManagerClient({ initialData }: { initialData: Stu
                           >
                             ✏️
                           </button>
+                          {canDelete && (
+                            <button
+                              onClick={() => setConfirmDeleteId(student.student_id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-500"
+                              title="Delete student"
+                            >
+                              🗑️
+                            </button>
+                          )}
                         </div>
                       )}
                       <p className="text-[9px] font-normal text-slate-400 uppercase tracking-widest mt-1.5">

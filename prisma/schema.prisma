@@ -83,6 +83,18 @@ model StarterKit {
   unnamedCount  Int     @default(0)
 }
 
+model deleted_invoices {
+  student_id   Int       @id
+  doc_no       String?   @db.VarChar(255)
+  doc_date     DateTime? @db.Timestamp(6)
+  branch_code  String?   @db.VarChar(50)
+  student_name String?   @db.VarChar(255)
+  package      String?   @db.VarChar(50)
+  type         String?   @db.VarChar(50)
+  deleted_at   DateTime  @default(now()) @db.Timestamp(6)
+  deleted_by   String?   @db.VarChar(255)
+}
+
 enum Role {
   SUPERADMIN
   ADMIN_HQ

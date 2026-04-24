@@ -2,10 +2,16 @@ import { db } from '@/lib/db';
 import StudentManagerClient from './StudentManagerClient';
 import { resolveBranchCode } from '@/lib/branchUtils';
 import { resolveStudentType } from '@/lib/studentUtils';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { canManageUsers } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function StudentManagerPage() {
+  const session = await getServerSession(authOptions);
+  const canDelete = session ? canManageUsers(session.user.role) : false;
+
   const rawStudents = await db.inventory_distribution_new.findMany({
     where: { is_active: true },
     select: {
@@ -53,5 +59,5 @@ export default async function StudentManagerPage() {
     };
   });
 
-  return <StudentManagerClient initialData={tableData} />;
+  return <StudentManagerClient initialData={tableData} canDelete={canDelete} />;
 }
