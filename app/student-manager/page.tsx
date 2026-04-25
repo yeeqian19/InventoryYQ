@@ -50,6 +50,7 @@ export default async function StudentManagerPage() {
     return {
       student_id: String(student.student_id),
       name: student.student_name || 'Unknown',
+      doc_no: student.doc_no || '',
       branch: finalBranch,
       skBarcode,
       egBarcode,

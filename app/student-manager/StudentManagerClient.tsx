@@ -7,14 +7,15 @@ import BranchMultiSelect from '@/components/BranchMultiSelect';
 
 
 type Student = {
-  student_id: string; 
+  student_id: string;
   name: string;
+  doc_no: string;
   branch: string;
   skBarcode: string;
   egBarcode: string;
   date: string;
-  studentType: string; 
-  package: string | null; 
+  studentType: string;
+  package: string | null;
 };
 
 export default function StudentManagerClient({ initialData, canDelete = false }: { initialData: Student[]; canDelete?: boolean }) {
@@ -343,7 +344,10 @@ export default function StudentManagerClient({ initialData, canDelete = false }:
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 group">
-                          <span>{nameOverrides[student.skBarcode] || student.name}</span>
+                          <div className="flex flex-col">
+                            <span>{nameOverrides[student.skBarcode] || student.name}</span>
+                            {student.doc_no && <span className="text-[10px] text-slate-400 font-normal">{student.doc_no}</span>}
+                          </div>
                           <button
                             onClick={() => { setRenamingBarcode(student.skBarcode); setRenameValue(nameOverrides[student.skBarcode] || student.name); }}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-500"
