@@ -8,19 +8,39 @@ export async function PATCH(req: Request) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { barcode, newName } = await req.json();
-    if (!barcode || !newName?.trim()) {
-      return NextResponse.json({ error: 'barcode and newName are required' }, { status: 400 });
+    const { studentId, newName } = await req.json();
+    if (!studentId || !newName?.trim()) {
+      return NextResponse.json({ error: 'studentId and newName are required' }, { status: 400 });
     }
 
-    const result = await db.inventory_distribution_new.updateMany({
-      where: { barcode_sk: barcode },
-      data: { student_name: newName.trim() },
-    });
+    const id = parseInt(studentId.split('-')[0]);
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'Invalid studentId' }, { status: 400 });
+    }
 
-    if (result.count === 0) {
+    const existing = await db.inventory_distribution_new.findUnique({ where: { student_id: id } });
+    if (!existing) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
+
+    // Check unique constraint: another row with same doc_no + new name
+    if (existing.doc_no) {
+      const conflict = await db.inventory_distribution_new.findFirst({
+        where: {
+          doc_no: existing.doc_no,
+          student_name: newName.trim(),
+          student_id: { not: id },
+        },
+      });
+      if (conflict) {
+        return NextResponse.json({ error: 'A student with that name already exists on the same invoice' }, { status: 409 });
+      }
+    }
+
+    await db.inventory_distribution_new.update({
+      where: { student_id: id },
+      data: { student_name: newName.trim() },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

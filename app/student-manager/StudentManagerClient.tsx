@@ -180,12 +180,12 @@ export default function StudentManagerClient({ initialData, canDelete = false }:
 
   const handleClearSelection = () => setSelectedIds([]);
 
-  const handleRename = async (skBarcode: string, newName: string) => {
+  const handleRename = async (studentId: string, skBarcode: string, newName: string) => {
     if (!newName.trim()) return;
     const res = await fetch('/api/students/rename', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ barcode: skBarcode, newName: newName.trim() }),
+      body: JSON.stringify({ studentId, newName: newName.trim() }),
     });
     if (res.ok) {
       setNameOverrides(prev => ({ ...prev, [skBarcode]: newName.trim() }));
@@ -329,10 +329,10 @@ export default function StudentManagerClient({ initialData, canDelete = false }:
                             type="text"
                             value={renameValue}
                             onChange={e => setRenameValue(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') handleRename(student.skBarcode, renameValue); if (e.key === 'Escape') setRenamingBarcode(null); }}
+                            onKeyDown={e => { if (e.key === 'Enter') handleRename(student.student_id, student.skBarcode, renameValue); if (e.key === 'Escape') setRenamingBarcode(null); }}
                             className="border border-blue-400 rounded-lg px-2 py-1 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-300 w-40"
                           />
-                          <button onClick={() => handleRename(student.skBarcode, renameValue)} className="px-2 py-1 bg-blue-500 text-white text-[9px] font-black rounded-lg uppercase">Save</button>
+                          <button onClick={() => handleRename(student.student_id, student.skBarcode, renameValue)} className="px-2 py-1 bg-blue-500 text-white text-[9px] font-black rounded-lg uppercase">Save</button>
                           <button onClick={() => setRenamingBarcode(null)} className="px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg uppercase">Cancel</button>
                         </div>
                       ) : confirmDeleteId === student.student_id ? (
