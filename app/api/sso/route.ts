@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-// 🟢 Match your specific db export
 import { db as prisma } from "@/lib/db"; 
 
 export async function GET(request: NextRequest) {
@@ -13,10 +12,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 1. Verify the token using the secret from your .env
     const payload = jwt.verify(token, secret) as { email: string };
 
-    // 2. Check if the user exists in your inv_db
     const user = await prisma.users.findUnique({
       where: { email: payload.email },
     });
@@ -25,8 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/login?error=UserNotFound", request.url));
     }
 
-    // 3. For now, we redirect to dashboard. 
-    // Once this link works, we will add the NextAuth session 'hack'.
+    // After success, go to dashboard
     return NextResponse.redirect(new URL("/dashboard", request.url));
 
   } catch (error) {
