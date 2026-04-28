@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk 'NR>=403 && NR<=603' app/dashboard/DashboardClient.tsx)"
+    ]
+  }
+}
