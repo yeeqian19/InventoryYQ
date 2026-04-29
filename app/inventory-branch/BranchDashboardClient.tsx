@@ -366,17 +366,17 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
         <div className="p-6 lg:p-10 flex flex-col lg:flex-row gap-8">
           <div className="flex-1 flex flex-col gap-6">
             <div className="grid grid-cols-3 gap-2 lg:gap-4">
-              <div className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden ${activeMode === 'PICKUP' ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-200'}`}>
+              <div onClick={() => setActiveMode('PICKUP')} className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden cursor-pointer active:scale-95 transition-transform select-none ${activeMode === 'PICKUP' ? 'border-amber-400 ring-2 ring-amber-100' : 'border-slate-200 hover:border-amber-300'}`}>
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400"></div>
                 <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Expected</p>
                 <p className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tighter">{expectedFromHQ}</p>
               </div>
-              <div className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden ${activeMode === 'HANDOVER' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200'}`}>
+              <div onClick={() => setActiveMode('HANDOVER')} className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden cursor-pointer active:scale-95 transition-transform select-none ${activeMode === 'HANDOVER' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-300'}`}>
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500"></div>
                 <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Ready</p>
                 <p className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tighter">{readyAtBranch}</p>
               </div>
-              <div className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden ${activeMode === 'HISTORY' ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-slate-200'}`}>
+              <div onClick={() => setActiveMode('HISTORY')} className={`bg-white p-4 lg:p-6 rounded-2xl border shadow-sm relative overflow-hidden cursor-pointer active:scale-95 transition-transform select-none ${activeMode === 'HISTORY' ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-emerald-300'}`}>
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
                 <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Done</p>
                 <p className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tighter">{completed}</p>
