@@ -1,30 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { db as prisma } from "@/lib/db"; 
+import { encode } from "next-auth/jwt";
+import { db as prisma } from "@/lib/db";
+import type { UserRole } from "@/types";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");
-  const secret = process.env.SHARED_SSO_SECRET;
+  const ssoSecret = process.env.SHARED_SSO_SECRET;
+  const nextAuthSecret = process.env.NEXTAUTH_SECRET;
 
-  if (!token || !secret) {
+  if (!token || !ssoSecret || !nextAuthSecret) {
     return NextResponse.redirect(new URL("/login?error=MissingSSOConfig", request.url));
   }
 
   try {
-    const payload = jwt.verify(token, secret) as { email: string };
+    const payload = jwt.verify(token, ssoSecret) as { email: string; jti?: string };
 
-    const user = await prisma.users.findUnique({
-      where: { email: payload.email },
+    const user = await prisma.users.findFirst({
+      where: { email: { equals: payload.email.trim(), mode: "insensitive" } },
     });
 
     if (!user) {
       return NextResponse.redirect(new URL("/login?error=UserNotFound", request.url));
     }
 
-    // After success, go to dashboard
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    // Build the same token shape that the NextAuth jwt callback produces
+    const sessionToken = await encode({
+      token: {
+        sub: String(user.id),
+        email: user.email ?? undefined,
+        name: user.name ?? "User",
+        role: (user.role ?? "USER_RM") as UserRole,
+        branchCode: user.branch_name ?? "",
+      },
+      secret: nextAuthSecret,
+      maxAge: 30 * 24 * 60 * 60, // 30 days — same as default NextAuth session
+    });
 
+    // NextAuth uses the Secure prefix on HTTPS (production)
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieName = isProduction
+      ? "__Secure-next-auth.session-token"
+      : "next-auth.session-token";
+
+    const response = NextResponse.redirect(new URL("/dashboard", request.url));
+
+    response.cookies.set(cookieName, sessionToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60,
+    });
+
+    return response;
   } catch (error) {
     console.error("SSO Error:", error);
     return NextResponse.redirect(new URL("/login?error=InvalidToken", request.url));

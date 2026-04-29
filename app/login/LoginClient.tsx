@@ -45,13 +45,14 @@ export default function LoginClient() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <div className="space-y-3">
             {/* text-[16px] prevents iOS Safari auto-zoom; h-12 = 48px touch target */}
             <input
               type="email"
               placeholder="Email"
               required
+              autoComplete="off"
               className="w-full h-12 rounded-xl border border-slate-700 bg-[#0f172a] px-4 text-[16px] text-white focus:border-emerald-500 focus:outline-none transition-all"
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -61,6 +62,7 @@ export default function LoginClient() {
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 required
+                autoComplete="new-password"
                 className="w-full h-12 rounded-xl border border-slate-700 bg-[#0f172a] px-4 pr-20 text-[16px] text-white focus:border-emerald-500 focus:outline-none transition-all"
                 onChange={(e) => setPassword(e.target.value)}
               />
