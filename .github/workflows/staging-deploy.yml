@@ -1,0 +1,19 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 103.209.156.225
+          username: ubuntu
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          command_timeout: 20m
+          script: /home/ubuntu/deploy-staging.sh inventory
