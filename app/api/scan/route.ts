@@ -58,20 +58,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
     const rows = await db.$queryRaw<RawRecord[]>`
       SELECT *,
         CASE
-          WHEN UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || LPAD(student_id::text, 6, '0'))) = ${trimmedBarcode} THEN 'SK'
+          WHEN UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || student_id::text)) = ${trimmedBarcode} THEN 'SK'
           WHEN UPPER(COALESCE(barcode_eg,
             CASE WHEN package ILIKE '9M%' OR package ILIKE '12M%'
-              THEN branch_code || '-EG-' || LPAD(student_id::text, 6, '0')
+              THEN branch_code || '-EG-' || student_id::text
               ELSE NULL END
           )) = ${trimmedBarcode} THEN 'EG'
           ELSE NULL
         END AS matched_type
       FROM inventory_distribution_new
       WHERE
-        UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || LPAD(student_id::text, 6, '0'))) = ${trimmedBarcode}
+        UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || student_id::text)) = ${trimmedBarcode}
         OR UPPER(COALESCE(barcode_eg,
           CASE WHEN package ILIKE '9M%' OR package ILIKE '12M%'
-            THEN branch_code || '-EG-' || LPAD(student_id::text, 6, '0')
+            THEN branch_code || '-EG-' || student_id::text
             ELSE NULL END
         )) = ${trimmedBarcode}
       LIMIT 1

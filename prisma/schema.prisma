@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../lib/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -23,12 +24,12 @@ model inventory_distribution_new {
   bm_pickup_date        DateTime? @db.Timestamp(6)
   student_received      Boolean   @default(false)
   student_received_date DateTime? @db.Timestamp(6)
-  barcode_sk            String?   @default(dbgenerated("(((branch_code)::text || '-SK-'::text) || lpad((student_id)::text, 6, '0'::text))")) @db.VarChar
   remark                String?   @db.VarChar(255)
-  barcode_eg            String?   @default(dbgenerated("\nCASE\n    WHEN (((package)::text ~~* '9M%'::text) OR ((package)::text ~~* '12M%'::text)) THEN (((branch_code)::text || '-EG-'::text) || lpad((student_id)::text, 6, '0'::text))\n    ELSE NULL::text\nEND")) @db.VarChar(255)
   proof_photo           String?
   bm_pickup_photo       String?
   is_active             Boolean   @default(true)
+  barcode_sk            String?   @unique(map: "uniq_barcode_sk", where: raw("(barcode_sk IS NOT NULL)")) @default(dbgenerated("(((branch_code)::text || '-SK-'::text) || (student_id)::text)")) @db.VarChar
+  barcode_eg            String?   @unique(map: "uniq_barcode_eg", where: raw("(barcode_eg IS NOT NULL)")) @default(dbgenerated("\nCASE\n    WHEN (((package)::text ~~* '9M%'::text) OR ((package)::text ~~* '12M%'::text)) THEN (((branch_code)::text || '-EG-'::text) || (student_id)::text)\n    ELSE NULL::text\nEND")) @db.VarChar(255)
 
   @@unique([doc_no, student_name])
 }
@@ -60,39 +61,41 @@ model ScanLog {
 }
 
 model Inventory {
-  id           Int      @id @default(autoincrement())
-  name         String   @unique
-  currentCount Int      @default(0)
-  threshold    Int      @default(0)
-  link         String?
-  isSkPart     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  inCartCount  Int      @default(0)
-  orderedCount Int      @default(0)
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  currentCount  Int      @default(0)
+  threshold     Int      @default(0)
+  link          String?
+  isSkPart      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  inCartCount   Int      @default(0)
+  orderedCount  Int      @default(0)
   category      String   @default("SK_ITEM")
   neededCount   Int      @default(0)
   supplierEmail String?
 }
 
 model StarterKit {
-  id            String  @id @default(cuid())
-  packedCount   Int     @default(0)
-  branchId      String?
-  namedCount    Int     @default(0)
-  unnamedCount  Int     @default(0)
+  id           String  @id @default(cuid())
+  packedCount  Int     @default(0)
+  branchId     String?
+  namedCount   Int     @default(0)
+  unnamedCount Int     @default(0)
 }
 
 model deleted_invoices {
-  student_id   Int       @id
+  student_id   Int       @id @default(autoincrement())
   doc_no       String?   @db.VarChar(255)
   doc_date     DateTime? @db.Timestamp(6)
   branch_code  String?   @db.VarChar(50)
   student_name String?   @db.VarChar(255)
   package      String?   @db.VarChar(50)
   type         String?   @db.VarChar(50)
-  deleted_at   DateTime  @default(now()) @db.Timestamp(6)
-  deleted_by   String?   @db.VarChar(255)
+  deleted_at   DateTime? @default(now()) @db.Timestamp(6)
+  deleted_by   String?   @default(dbgenerated("CURRENT_USER"))
+
+  @@unique([doc_no, student_name])
 }
 
 enum Role {
