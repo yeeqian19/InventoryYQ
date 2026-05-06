@@ -4,13 +4,14 @@ import { resolveBranchCode } from '@/lib/branchUtils';
 import { resolveStudentType } from '@/lib/studentUtils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { canManageUsers } from '@/lib/permissions';
+import { canManageUsers, canUndoScans } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function StudentManagerPage() {
   const session = await getServerSession(authOptions);
   const canDelete = session ? canManageUsers(session.user.role) : false;
+  const canUndo = session ? canUndoScans(session.user.role) : false;
 
   const rawStudents = await db.inventory_distribution_new.findMany({
     where: { is_active: true },
@@ -22,11 +23,19 @@ export default async function StudentManagerPage() {
       barcode_eg: true,
       doc_date: true,
       doc_no: true,
-      type: true,      
-      package: true,   
+      type: true,
+      package: true,
+      sk_prep: true,
+      sk_prep_date: true,
+      eg_prep: true,
+      eg_prep_date: true,
+      bm_pickup: true,
+      bm_pickup_date: true,
+      student_received: true,
+      student_received_date: true,
     },
     orderBy: {
-      doc_date: 'desc', 
+      doc_date: 'desc',
     },
   });
 
@@ -57,8 +66,16 @@ export default async function StudentManagerPage() {
       date: formattedDate,
       studentType: sType,
       package: student.package || null,
+      sk_prep: student.sk_prep,
+      sk_prep_date: student.sk_prep_date?.toISOString() ?? null,
+      eg_prep: student.eg_prep,
+      eg_prep_date: student.eg_prep_date?.toISOString() ?? null,
+      bm_pickup: student.bm_pickup,
+      bm_pickup_date: student.bm_pickup_date?.toISOString() ?? null,
+      student_received: student.student_received,
+      student_received_date: student.student_received_date?.toISOString() ?? null,
     };
   });
 
-  return <StudentManagerClient initialData={tableData} canDelete={canDelete} />;
+  return <StudentManagerClient initialData={tableData} canDelete={canDelete} canUndo={canUndo} />;
 }

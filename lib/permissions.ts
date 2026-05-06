@@ -56,3 +56,8 @@ export function isSuperAdmin(role: UserRole): boolean {
 export function canManageStock(role: UserRole): boolean {
   return isHQEditor(role);
 }
+
+/** Returns true if the role can undo a scan stage (sk_prep, eg_prep, bm_pickup, student_received) */
+export function canUndoScans(role: UserRole): boolean {
+  return role === 'SUPERADMIN';
+}

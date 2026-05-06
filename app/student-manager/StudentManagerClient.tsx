@@ -16,9 +16,26 @@ type Student = {
   date: string;
   studentType: string;
   package: string | null;
+  sk_prep: boolean;
+  sk_prep_date: string | null;
+  eg_prep: boolean;
+  eg_prep_date: string | null;
+  bm_pickup: boolean;
+  bm_pickup_date: string | null;
+  student_received: boolean;
+  student_received_date: string | null;
 };
 
-export default function StudentManagerClient({ initialData, canDelete = false }: { initialData: Student[]; canDelete?: boolean }) {
+type UndoStage = 'sk_prep' | 'eg_prep' | 'bm_pickup' | 'student_received';
+
+const STAGE_LABEL: Record<UndoStage, string> = {
+  sk_prep: 'SK Prep',
+  eg_prep: 'EG Prep',
+  bm_pickup: 'Pickup',
+  student_received: 'Received',
+};
+
+export default function StudentManagerClient({ initialData, canDelete = false, canUndo = false }: { initialData: Student[]; canDelete?: boolean; canUndo?: boolean }) {
   const [hasMounted, setHasMounted] = useState(false);
 
   // --- STATE ---
@@ -33,6 +50,8 @@ export default function StudentManagerClient({ initialData, canDelete = false }:
   const [nameOverrides, setNameOverrides] = useState<Record<string, string>>({});
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletedDbIds, setDeletedDbIds] = useState<Set<number>>(new Set());
+  const [confirmUndo, setConfirmUndo] = useState<{ studentId: string; stage: UndoStage } | null>(null);
+  const [undoBusy, setUndoBusy] = useState(false);
   
   // Date Helpers
   const formatDateForInput = (date: Date) => {
@@ -210,6 +229,36 @@ export default function StudentManagerClient({ initialData, canDelete = false }:
     }
   };
 
+  const handleUndo = async (studentId: string, stage: UndoStage) => {
+    const baseId = parseInt(studentId.split('-')[0]);
+    setUndoBusy(true);
+    try {
+      const res = await fetch('/api/scan/undo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: baseId, stage }),
+      });
+      if (res.ok) {
+        setConfirmUndo(null);
+        // Reload to refetch fresh stage state from the server.
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to undo scan.');
+      }
+    } catch {
+      alert('Network error.');
+    } finally {
+      setUndoBusy(false);
+    }
+  };
+
+  const fmtStageDate = (iso: string | null) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-MY', { day: '2-digit', month: 'short' });
+  };
+
   const getPackageColor = (pkg: string | null) => {
     if (!pkg) return 'bg-slate-100 text-slate-500';
     if (pkg.includes('12M')) return 'bg-purple-100 text-purple-700';
@@ -342,27 +391,74 @@ export default function StudentManagerClient({ initialData, canDelete = false }:
                           <button onClick={() => handleDelete(student.student_id)} className="px-2 py-1 bg-rose-500 text-white text-[9px] font-black rounded-lg uppercase">Yes, Delete</button>
                           <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg uppercase">Cancel</button>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-2 group">
-                          <div className="flex flex-col">
-                            <span>{nameOverrides[student.skBarcode] || student.name}</span>
-                            {student.doc_no && <span className="text-[10px] text-slate-400 font-normal">{student.doc_no}</span>}
-                          </div>
+                      ) : confirmUndo && confirmUndo.studentId === student.student_id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-amber-600">Undo {STAGE_LABEL[confirmUndo.stage]}?</span>
                           <button
-                            onClick={() => { setRenamingBarcode(student.skBarcode); setRenameValue(nameOverrides[student.skBarcode] || student.name); }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-500"
-                            title="Rename student"
+                            disabled={undoBusy}
+                            onClick={() => handleUndo(student.student_id, confirmUndo.stage)}
+                            className="px-2 py-1 bg-amber-500 text-white text-[9px] font-black rounded-lg uppercase disabled:opacity-50"
                           >
-                            ✏️
+                            {undoBusy ? 'Working…' : 'Yes, Undo'}
                           </button>
-                          {canDelete && (
+                          <button onClick={() => setConfirmUndo(null)} className="px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black rounded-lg uppercase">Cancel</button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2 group">
+                            <div className="flex flex-col">
+                              <span>{nameOverrides[student.skBarcode] || student.name}</span>
+                              {student.doc_no && <span className="text-[10px] text-slate-400 font-normal">{student.doc_no}</span>}
+                            </div>
                             <button
-                              onClick={() => setConfirmDeleteId(student.student_id)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-500"
-                              title="Delete student"
+                              onClick={() => { setRenamingBarcode(student.skBarcode); setRenameValue(nameOverrides[student.skBarcode] || student.name); }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-blue-500"
+                              title="Rename student"
                             >
-                              🗑️
+                              ✏️
                             </button>
+                            {canDelete && (
+                              <button
+                                onClick={() => setConfirmDeleteId(student.student_id)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-500"
+                                title="Delete student"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+
+                          {(student.sk_prep || student.eg_prep || student.bm_pickup || student.student_received) && (
+                            <div className="flex flex-wrap gap-1">
+                              {student.sk_prep && (
+                                <StagePill
+                                  label={`SK Prep ${fmtStageDate(student.sk_prep_date)}`}
+                                  tone="blue"
+                                  onUndo={canUndo ? () => setConfirmUndo({ studentId: student.student_id, stage: 'sk_prep' }) : undefined}
+                                />
+                              )}
+                              {student.eg_prep && (
+                                <StagePill
+                                  label={`EG Prep ${fmtStageDate(student.eg_prep_date)}`}
+                                  tone="purple"
+                                  onUndo={canUndo ? () => setConfirmUndo({ studentId: student.student_id, stage: 'eg_prep' }) : undefined}
+                                />
+                              )}
+                              {student.bm_pickup && (
+                                <StagePill
+                                  label={`Pickup ${fmtStageDate(student.bm_pickup_date)}`}
+                                  tone="amber"
+                                  onUndo={canUndo ? () => setConfirmUndo({ studentId: student.student_id, stage: 'bm_pickup' }) : undefined}
+                                />
+                              )}
+                              {student.student_received && (
+                                <StagePill
+                                  label={`Received ${fmtStageDate(student.student_received_date)}`}
+                                  tone="emerald"
+                                  onUndo={canUndo ? () => setConfirmUndo({ studentId: student.student_id, stage: 'student_received' }) : undefined}
+                                />
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
@@ -435,5 +531,31 @@ export default function StudentManagerClient({ initialData, canDelete = false }:
         })}
       </div>
     </div>
+  );
+}
+
+type StagePillTone = 'blue' | 'purple' | 'amber' | 'emerald';
+
+const TONE_CLASSES: Record<StagePillTone, string> = {
+  blue: 'bg-blue-50 text-blue-700 border-blue-200',
+  purple: 'bg-purple-50 text-purple-700 border-purple-200',
+  amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
+
+function StagePill({ label, tone, onUndo }: { label: string; tone: StagePillTone; onUndo?: () => void }) {
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest ${TONE_CLASSES[tone]}`}>
+      <span>✓ {label}</span>
+      {onUndo && (
+        <button
+          onClick={onUndo}
+          title="Undo this stage (SUPERADMIN)"
+          className="ml-0.5 px-1 rounded hover:bg-white/60 text-slate-500 hover:text-rose-600"
+        >
+          ↶
+        </button>
+      )}
+    </span>
   );
 }
