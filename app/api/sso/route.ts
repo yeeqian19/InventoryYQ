@@ -44,7 +44,12 @@ export async function GET(request: NextRequest) {
       ? "__Secure-next-auth.session-token"
       : "next-auth.session-token";
 
-    const response = NextResponse.redirect(new URL("/dashboard", request.url));
+    // Use NEXTAUTH_URL as the base so the redirect points at the public
+    // hostname (e.g. staging-inventory.ebright.my) instead of the container's
+    // internal address that request.url surfaces when behind a reverse proxy.
+    // Land on the role-aware home page (`/`) instead of `/dashboard`.
+    const baseUrl = process.env.NEXTAUTH_URL || request.url;
+    const response = NextResponse.redirect(new URL("/", baseUrl));
 
     response.cookies.set(cookieName, sessionToken, {
       httpOnly: true,
