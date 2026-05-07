@@ -41,7 +41,7 @@ export type TrackerComputed = {
 
 export function isEgRequired(pkg: string | null | undefined): boolean {
   if (!pkg) return false;
-  return /^9M|^12M/i.test(pkg.trim());
+  return /^12M/i.test(pkg.trim());
 }
 
 function toDate(value: Date | string | null | undefined): Date | null {

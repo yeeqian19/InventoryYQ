@@ -628,7 +628,10 @@ export default function DashboardClient({
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Student Tracker</p>
-            <p className="text-xs font-black text-slate-700 uppercase tracking-wide mt-0.5">SK + EG workflow timeline</p>
+            <p className="text-xs font-black text-slate-700 uppercase tracking-wide mt-0.5">
+              SK + EG workflow timeline
+              <span className="ml-2 text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">Last Week</span>
+            </p>
           </div>
           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Open →</span>
         </div>

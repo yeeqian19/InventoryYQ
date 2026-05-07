@@ -88,9 +88,20 @@ export default async function DashboardPage() {
     return items;
   });
 
-  // 4. Compute tracker stats for the dashboard summary cards
+  // 4. Compute tracker stats (default scope = Last Week of doc_date)
+  const today = new Date();
+  const lastWeekEnd = new Date();
+  lastWeekEnd.setDate(today.getDate() - today.getDay()); // Sunday of last week
+  lastWeekEnd.setHours(23, 59, 59, 999);
+  const lastWeekStart = new Date(lastWeekEnd);
+  lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+  lastWeekStart.setHours(0, 0, 0, 0);
+
   const trackerRaw = await db.inventory_distribution_new.findMany({
-    where: { is_active: true },
+    where: {
+      is_active: true,
+      doc_date: { gte: lastWeekStart, lte: lastWeekEnd },
+    },
     select: {
       doc_date: true,
       package: true,
@@ -121,6 +132,5 @@ export default async function DashboardPage() {
     { total: 0, onTrack: 0, dueSoon: 0, overdue: 0, completed: 0 },
   );
 
-  // 5. Pass data AND user to the Client Component
   return <DashboardClient dbData={formattedData} user={session.user} trackerStats={trackerStats} />;
 }

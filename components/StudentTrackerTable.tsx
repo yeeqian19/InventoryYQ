@@ -20,6 +20,7 @@ export type TrackerRow = {
   doc_no: string | null;
   doc_date: string | null;
   package: string | null;
+  type: string | null;
   sk_prep: boolean;
   sk_prep_date: string | null;
   eg_prep: boolean;
@@ -61,6 +62,58 @@ const STATUS_FILTER_OPTIONS: { value: TrackerStatus | 'ALL'; label: string }[] =
   { value: 'COMPLETED', label: 'Completed' },
 ];
 
+type TypeFilter = 'ALL' | 'NEW' | 'RENEWAL' | 'TRIAL';
+const TYPE_FILTER_OPTIONS: { value: TypeFilter; label: string }[] = [
+  { value: 'ALL', label: 'All Types' },
+  { value: 'NEW', label: 'New Students' },
+  { value: 'RENEWAL', label: 'Renewal' },
+  { value: 'TRIAL', label: 'Trial' },
+];
+
+type DatePreset = 'all' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
+const DATE_PRESET_OPTIONS: { value: DatePreset; label: string }[] = [
+  { value: 'all', label: 'All Time' },
+  { value: 'thisWeek', label: 'This Week' },
+  { value: 'lastWeek', label: 'Last Week' },
+  { value: 'thisMonth', label: 'This Month' },
+  { value: 'lastMonth', label: 'Last Month' },
+  { value: 'custom', label: 'Custom' },
+];
+
+function formatDateForInput(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function rangeForPreset(preset: DatePreset): { start: string; end: string } {
+  const today = new Date();
+  if (preset === 'all' || preset === 'custom') return { start: '', end: '' };
+  if (preset === 'thisWeek') {
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const start = new Date(today);
+    start.setDate(diff);
+    return { start: formatDateForInput(start), end: formatDateForInput(today) };
+  }
+  if (preset === 'lastWeek') {
+    const end = new Date();
+    end.setDate(end.getDate() - end.getDay());
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+    return { start: formatDateForInput(start), end: formatDateForInput(end) };
+  }
+  if (preset === 'thisMonth') {
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { start: formatDateForInput(start), end: formatDateForInput(today) };
+  }
+  // lastMonth
+  const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const end = new Date(today.getFullYear(), today.getMonth(), 0);
+  return { start: formatDateForInput(start), end: formatDateForInput(end) };
+}
+
 export default function StudentTrackerTable({
   rows,
   canExtend,
@@ -72,6 +125,10 @@ export default function StudentTrackerTable({
   const [branchFilter, setBranchFilter] = useState<string>('ALL');
   const [stageFilter, setStageFilter] = useState<TrackerStage | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<TrackerStatus | 'ALL'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
+  const [datePreset, setDatePreset] = useState<DatePreset>('lastWeek');
+  const [startDate, setStartDate] = useState<string>(() => rangeForPreset('lastWeek').start);
+  const [endDate, setEndDate] = useState<string>(() => rangeForPreset('lastWeek').end);
 
   const [extendingFor, setExtendingFor] = useState<TrackerRow | null>(null);
   const [extendDays, setExtendDays] = useState<number>(DEFAULT_EXTENSION_DAYS);
@@ -113,9 +170,27 @@ export default function StudentTrackerTable({
       if (branchFilter !== 'ALL' && r.branch_code !== branchFilter) return false;
       if (stageFilter !== 'ALL' && r.computed.stage !== stageFilter) return false;
       if (statusFilter !== 'ALL' && r.computed.status !== statusFilter) return false;
+      if (typeFilter !== 'ALL') {
+        const t = (r.type ?? '').toUpperCase();
+        if (t !== typeFilter) return false;
+      }
+      if (startDate || endDate) {
+        const docDay = r.doc_date ? r.doc_date.slice(0, 10) : '';
+        if (!docDay) return false;
+        if (startDate && docDay < startDate) return false;
+        if (endDate && docDay > endDate) return false;
+      }
       return true;
     });
-  }, [computed, search, branchFilter, stageFilter, statusFilter]);
+  }, [computed, search, branchFilter, stageFilter, statusFilter, typeFilter, startDate, endDate]);
+
+  const handlePresetChange = (val: DatePreset) => {
+    setDatePreset(val);
+    if (val === 'custom') return;
+    const { start, end } = rangeForPreset(val);
+    setStartDate(start);
+    setEndDate(end);
+  };
 
   const counts = useMemo(() => {
     const c = { total: 0, on_track: 0, due_soon: 0, overdue: 0, completed: 0 };
@@ -161,6 +236,49 @@ export default function StudentTrackerTable({
       )}
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-4 lg:px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center bg-slate-50/40">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
+            className="bg-emerald-50 border border-emerald-100 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 outline-none cursor-pointer focus:border-emerald-500"
+          >
+            {TYPE_FILTER_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <select
+            value={datePreset}
+            onChange={(e) => handlePresetChange(e.target.value as DatePreset)}
+            className="bg-white border border-slate-200 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer focus:border-emerald-500"
+          >
+            {DATE_PRESET_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-1.5">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setDatePreset('custom'); }}
+              className="text-[11px] font-bold text-slate-600 bg-transparent outline-none"
+            />
+            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">TO</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setDatePreset('custom'); }}
+              className="text-[11px] font-bold text-slate-600 bg-transparent outline-none"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              onClick={() => { setStartDate(''); setEndDate(''); setDatePreset('all'); }}
+              className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
         <div className="px-4 lg:px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center">
           <input
             type="text"
