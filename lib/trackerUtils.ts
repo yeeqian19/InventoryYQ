@@ -188,3 +188,48 @@ export function stagesAfter(stage: TrackerStage): TrackerStage[] {
     case 'COMPLETED': return [];
   }
 }
+
+export type DatePreset = 'all' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'custom';
+
+export const DATE_PRESET_OPTIONS: { value: DatePreset; label: string }[] = [
+  { value: 'all', label: 'All Time' },
+  { value: 'thisWeek', label: 'This Week' },
+  { value: 'lastWeek', label: 'Last Week' },
+  { value: 'thisMonth', label: 'This Month' },
+  { value: 'lastMonth', label: 'Last Month' },
+  { value: 'custom', label: 'Custom' },
+];
+
+export function formatDateForInput(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function rangeForPreset(preset: DatePreset): { start: string; end: string } {
+  const today = new Date();
+  if (preset === 'all' || preset === 'custom') return { start: '', end: '' };
+  if (preset === 'thisWeek') {
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const start = new Date(today);
+    start.setDate(diff);
+    return { start: formatDateForInput(start), end: formatDateForInput(today) };
+  }
+  if (preset === 'lastWeek') {
+    const end = new Date();
+    end.setDate(end.getDate() - end.getDay());
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+    return { start: formatDateForInput(start), end: formatDateForInput(end) };
+  }
+  if (preset === 'thisMonth') {
+    const start = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { start: formatDateForInput(start), end: formatDateForInput(today) };
+  }
+  // lastMonth
+  const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const end = new Date(today.getFullYear(), today.getMonth(), 0);
+  return { start: formatDateForInput(start), end: formatDateForInput(end) };
+}

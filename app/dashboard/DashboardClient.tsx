@@ -8,6 +8,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import BranchMultiSelect from '@/components/BranchMultiSelect';
+import TrackerStrip, { type TrackerStats } from '@/components/TrackerStrip';
 
 const COLORS = { prepared: '#10b981', unprepared: '#ef4444' };
 
@@ -65,14 +66,6 @@ type DashboardUser = {
   email?: string | null;
   role?: string | null;
   branch_name?: string | null;
-};
-
-type TrackerStats = {
-  total: number;
-  onTrack: number;
-  dueSoon: number;
-  overdue: number;
-  completed: number;
 };
 
 type MobileTab = 'overview' | 'charts' | 'branches';
@@ -619,47 +612,9 @@ export default function DashboardClient({
     </div>
   );
 
-  const TrackerStrip = trackerStats ? (
-    <div className="lg:ml-72 px-4 lg:px-6 pt-4 lg:pt-6 bg-[#f8fafc]">
-      <Link
-        href="/student-tracker"
-        className="block bg-white rounded-2xl border border-slate-200 shadow-sm p-4 lg:p-5 no-underline hover:border-emerald-300 transition-colors"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Student Tracker</p>
-            <p className="text-xs font-black text-slate-700 uppercase tracking-wide mt-0.5">
-              SK + EG workflow timeline
-              <span className="ml-2 text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">Last Week</span>
-            </p>
-          </div>
-          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Open →</span>
-        </div>
-        <div className="grid grid-cols-4 gap-2 lg:gap-3">
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-            <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">Active</p>
-            <p className="text-xl lg:text-3xl font-black text-slate-900 tracking-tighter">{trackerStats.total}</p>
-          </div>
-          <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
-            <p className="text-[8px] lg:text-[9px] font-black text-emerald-600 uppercase tracking-widest">On-Track</p>
-            <p className="text-xl lg:text-3xl font-black text-emerald-700 tracking-tighter">{trackerStats.onTrack}</p>
-          </div>
-          <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
-            <p className="text-[8px] lg:text-[9px] font-black text-amber-600 uppercase tracking-widest">Due Soon</p>
-            <p className="text-xl lg:text-3xl font-black text-amber-700 tracking-tighter">{trackerStats.dueSoon}</p>
-          </div>
-          <div className="bg-red-50 rounded-xl p-3 border border-red-100">
-            <p className="text-[8px] lg:text-[9px] font-black text-red-600 uppercase tracking-widest">Overdue</p>
-            <p className="text-xl lg:text-3xl font-black text-red-700 tracking-tighter">{trackerStats.overdue}</p>
-          </div>
-        </div>
-      </Link>
-    </div>
-  ) : null;
-
   return (
     <>
-      {TrackerStrip}
+      {trackerStats && <TrackerStrip initialStats={trackerStats} initialPreset="lastWeek" />}
       <div className="lg:hidden">{MobileView}</div>
       <div className="hidden lg:block">{DesktopView}</div>
     </>
