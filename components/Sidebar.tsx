@@ -8,6 +8,7 @@ import { useState } from 'react';
 const allNavItems = [
   { name: 'Dashboard',       href: '/dashboard',       icon: '📦', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
   { name: 'Student Manager', href: '/student-manager', icon: '👥', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Student Tracker', href: '/student-tracker', icon: '⏱️', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
   { name: 'Scan & Approve',  href: '/scan-approve',    icon: '📷', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
   { name: 'Scan Log',        href: '/scan-log',        icon: '📋', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
 ];

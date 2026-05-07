@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import PhotoCapturePanel from '@/components/PhotoCapturePanel';
+import StudentTrackerTable, { type TrackerRow } from '@/components/StudentTrackerTable';
 
 // --- NEW MASTER BRANCH CONFIGURATION ---
 type Region = 'A' | 'B' | 'C' | 'HQ';
@@ -62,9 +63,10 @@ type Props = {
   initialData: InventoryItem[];
   userRole: string;
   userBranchCode: string;
+  trackerRows?: TrackerRow[];
 };
 
-export default function BranchDashboardClient({ initialData, userRole, userBranchCode }: Props) {
+export default function BranchDashboardClient({ initialData, userRole, userBranchCode, trackerRows = [] }: Props) {
   const router = useRouter();
   const isBranchManager = userRole === 'USER_BM';
   const isViewOnly = userRole === 'ADMIN_HQ' || userRole === 'USER_RM';
@@ -80,7 +82,12 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
     : SORTED_BRANCHES[0].code;
 
   const [activeBranch, setActiveBranch] = useState(defaultBranch);
-  const [activeMode, setActiveMode] = useState<'PICKUP' | 'HANDOVER' | 'HISTORY'>('PICKUP');
+  const [activeMode, setActiveMode] = useState<'PICKUP' | 'HANDOVER' | 'HISTORY' | 'TRACKER'>('PICKUP');
+
+  const branchTrackerRows = useMemo(
+    () => trackerRows.filter((r) => r.branch_code === activeBranch),
+    [trackerRows, activeBranch],
+  );
 
   // Scanner starts closed — user must press the button to grant camera permission
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -307,6 +314,10 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
             className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'HISTORY' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
             <span className="text-xl">✅</span> 3. History
           </button>
+          <button onClick={() => { setActiveMode('TRACKER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+            className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'TRACKER' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
+            <span className="text-xl">⏱️</span> 4. Student Tracker
+          </button>
         </nav>
 
         <div className="p-6 border-t border-white/10 bg-black/10">
@@ -330,10 +341,10 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
         <div className="px-6 lg:px-10 py-6 flex flex-col lg:flex-row justify-between lg:items-end gap-4 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10">
           <div>
             <h2 className="text-2xl lg:text-3xl font-black text-slate-900 uppercase tracking-tighter">
-              {activeMode === 'PICKUP' ? 'Receiving Terminal' : activeMode === 'HANDOVER' ? 'Handover Terminal' : 'History Terminal'}
+              {activeMode === 'PICKUP' ? 'Receiving Terminal' : activeMode === 'HANDOVER' ? 'Handover Terminal' : activeMode === 'TRACKER' ? 'Student Tracker' : 'History Terminal'}
             </h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-               {activeMode === 'PICKUP' ? 'Scan items arriving from HQ Lorry' : activeMode === 'HANDOVER' ? 'Scan items given to students' : 'View history'}
+               {activeMode === 'PICKUP' ? 'Scan items arriving from HQ Lorry' : activeMode === 'HANDOVER' ? 'Scan items given to students' : activeMode === 'TRACKER' ? 'SK + EG workflow timeline · view-only' : 'View history'}
             </p>
           </div>
           <div className="flex items-end gap-3 w-full lg:w-auto">
@@ -363,6 +374,16 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
           </div>
         </div>
 
+        {activeMode === 'TRACKER' ? (
+          <div className="p-6 lg:p-10">
+            <StudentTrackerTable
+              rows={branchTrackerRows}
+              canExtend={false}
+              showBranchFilter={false}
+              showSummaryCards={true}
+            />
+          </div>
+        ) : (
         <div className="p-6 lg:p-10 flex flex-col lg:flex-row gap-8">
           <div className="flex-1 flex flex-col gap-6">
             <div className="grid grid-cols-3 gap-2 lg:gap-4">
@@ -502,6 +523,7 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* MOBILE BOTTOM NAV — only visible on mobile */}
@@ -533,6 +555,13 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
         >
           <span className="text-lg">✅</span>
           <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">History</span>
+        </button>
+        <button
+          onClick={() => { setActiveMode('TRACKER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+          className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors ${activeMode === 'TRACKER' ? 'text-[#7cb342]' : 'text-slate-400'}`}
+        >
+          <span className="text-lg">⏱️</span>
+          <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">Tracker</span>
         </button>
       </div>
 

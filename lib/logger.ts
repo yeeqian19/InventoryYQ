@@ -6,7 +6,7 @@ type LogActionParams = {
   studentName: string;
   itemType: string;
   branch: string;
-  actionType: 'PREPARED' | 'PICKED UP' | 'RECEIVED' | 'UNDO_PREPARED' | 'UNDO_PICKED UP' | 'UNDO_RECEIVED';
+  actionType: 'PREPARED' | 'PICKED UP' | 'RECEIVED' | 'UNDO_PREPARED' | 'UNDO_PICKED UP' | 'UNDO_RECEIVED' | 'EXTENDED';
   processedBy: string;
 };
 

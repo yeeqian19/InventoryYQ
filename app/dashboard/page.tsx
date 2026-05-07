@@ -5,6 +5,7 @@ import { authOptions } from "../api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { resolveBranchCode } from '@/lib/branchUtils';
 import { resolveStudentType, hasEnrollmentGift, giftNameForPackage } from '@/lib/studentUtils';
+import { computeTracker } from '@/lib/trackerUtils';
 
 export const dynamic = 'force-dynamic'; 
 
@@ -87,7 +88,39 @@ export default async function DashboardPage() {
     return items;
   });
 
-  // 4. Pass data AND user to the Client Component
-  // Make sure DashboardClient.tsx is updated to accept the 'user' prop!
-  return <DashboardClient dbData={formattedData} user={session.user} />;
+  // 4. Compute tracker stats for the dashboard summary cards
+  const trackerRaw = await db.inventory_distribution_new.findMany({
+    where: { is_active: true },
+    select: {
+      doc_date: true,
+      package: true,
+      sk_prep: true,
+      sk_prep_date: true,
+      eg_prep: true,
+      eg_prep_date: true,
+      bm_pickup: true,
+      bm_pickup_date: true,
+      student_received: true,
+      student_received_date: true,
+      hq_prep_extension_days: true,
+      bm_pickup_extension_days: true,
+      bm_handover_extension_days: true,
+    },
+  });
+
+  const trackerStats = trackerRaw.reduce(
+    (acc, r) => {
+      const c = computeTracker(r);
+      acc.total += 1;
+      if (c.status === 'ON_TRACK') acc.onTrack += 1;
+      else if (c.status === 'DUE_SOON') acc.dueSoon += 1;
+      else if (c.status === 'OVERDUE') acc.overdue += 1;
+      else if (c.status === 'COMPLETED') acc.completed += 1;
+      return acc;
+    },
+    { total: 0, onTrack: 0, dueSoon: 0, overdue: 0, completed: 0 },
+  );
+
+  // 5. Pass data AND user to the Client Component
+  return <DashboardClient dbData={formattedData} user={session.user} trackerStats={trackerStats} />;
 }

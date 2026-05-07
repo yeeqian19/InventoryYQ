@@ -28,6 +28,9 @@ model inventory_distribution_new {
   proof_photo           String?
   bm_pickup_photo       String?
   is_active             Boolean   @default(true)
+  hq_prep_extension_days     Int  @default(0)
+  bm_pickup_extension_days   Int  @default(0)
+  bm_handover_extension_days Int  @default(0)
   barcode_sk            String?   @unique(map: "uniq_barcode_sk", where: raw("(barcode_sk IS NOT NULL)")) @default(dbgenerated("(((branch_code)::text || '-SK-'::text) || (student_id)::text)")) @db.VarChar
   barcode_eg            String?   @unique(map: "uniq_barcode_eg", where: raw("(barcode_eg IS NOT NULL)")) @default(dbgenerated("\nCASE\n    WHEN (((package)::text ~~* '9M%'::text) OR ((package)::text ~~* '12M%'::text)) THEN (((branch_code)::text || '-EG-'::text) || (student_id)::text)\n    ELSE NULL::text\nEND")) @db.VarChar(255)
 
