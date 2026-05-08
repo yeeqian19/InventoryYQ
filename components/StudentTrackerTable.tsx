@@ -74,6 +74,17 @@ const TYPE_FILTER_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: 'TRIAL', label: 'Trial' },
 ];
 
+const EXTENSION_REASONS = [
+  'B&W needed, sent to HQ',
+  'Stock unavailable at HQ',
+  'Branch closed/unavailable',
+  'Student requested delay',
+  'Item damaged, replacement needed',
+  'Lost in transit',
+  'Informing parents, item ready',
+  'Awaiting branch confirmation',
+] as const;
+
 
 export default function StudentTrackerTable({
   rows,
@@ -185,6 +196,10 @@ export default function StudentTrackerTable({
     if (!extendingFor || !onExtend) return;
     if (!Number.isFinite(extendDays) || extendDays < 1 || extendDays > 90) {
       setExtendError('Days must be between 1 and 90.');
+      return;
+    }
+    if (!extendReason.trim()) {
+      setExtendError('Please pick a reason for the extension.');
       return;
     }
     setExtendBusy(true);
@@ -486,14 +501,17 @@ export default function StudentTrackerTable({
                 </p>
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Reason (optional)</label>
-                <input
-                  type="text"
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Reason</label>
+                <select
                   value={extendReason}
                   onChange={(e) => setExtendReason(e.target.value)}
-                  placeholder="e.g. B&W needed, sent to HQ"
-                  className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-emerald-500"
-                />
+                  className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  <option value="">— Select a reason —</option>
+                  {EXTENSION_REASONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
               </div>
               {extendError && (
                 <div className="text-[10px] font-black uppercase tracking-widest text-red-600">{extendError}</div>
