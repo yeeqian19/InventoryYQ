@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { resolveBranchCode } from '@/lib/branchUtils';
 import { resolveStudentType, hasEnrollmentGift, giftNameForPackage } from '@/lib/studentUtils';
 import { computeTracker } from '@/lib/trackerUtils';
+// resolveStudentType is also used below to scope tracker stats to NEW students.
 
 export const dynamic = 'force-dynamic'; 
 
@@ -105,6 +106,7 @@ export default async function DashboardPage() {
     select: {
       doc_date: true,
       package: true,
+      type: true,
       sk_prep: true,
       sk_prep_date: true,
       eg_prep: true,
@@ -119,7 +121,11 @@ export default async function DashboardPage() {
     },
   });
 
-  const trackerStats = trackerRaw.reduce(
+  // Workflow only applies to NEW students — exclude RENEWAL/TRIAL from the
+  // dashboard strip counts so they match the tracker page numbers.
+  const trackerStats = trackerRaw
+    .filter((r) => resolveStudentType(r.type, r.package) === 'NEW')
+    .reduce(
     (acc, r) => {
       const c = computeTracker(r);
       acc.total += 1;

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { db } from '@/lib/db';
 import { computeTracker } from '@/lib/trackerUtils';
+import { resolveStudentType } from '@/lib/studentUtils';
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -39,6 +40,7 @@ export async function GET(req: Request) {
     select: {
       doc_date: true,
       package: true,
+      type: true,
       sk_prep: true,
       sk_prep_date: true,
       eg_prep: true,
@@ -53,7 +55,10 @@ export async function GET(req: Request) {
     },
   });
 
-  const stats = rows.reduce(
+  // Workflow only applies to NEW students — match the tracker page scope.
+  const stats = rows
+    .filter((r) => resolveStudentType(r.type, r.package) === 'NEW')
+    .reduce(
     (acc, r) => {
       const c = computeTracker(r);
       acc.total += 1;
