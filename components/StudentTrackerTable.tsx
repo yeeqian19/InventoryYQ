@@ -85,7 +85,7 @@ export default function StudentTrackerTable({
   const [branchFilter, setBranchFilter] = useState<string>('ALL');
   const [stageFilter, setStageFilter] = useState<TrackerStage | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<TrackerStatus | 'ALL'>('ALL');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('NEW');
   const [datePreset, setDatePreset] = useState<DatePreset>('lastWeek');
   const [startDate, setStartDate] = useState<string>(() => rangeForPreset('lastWeek').start);
   const [endDate, setEndDate] = useState<string>(() => rangeForPreset('lastWeek').end);
@@ -152,9 +152,30 @@ export default function StudentTrackerTable({
     setEndDate(end);
   };
 
+  // KPI cards reflect what's currently filtered (date range, type, branch, stage, status, search).
+  // Counts here ignore the stage/status filters so the four cards stay meaningful even when the
+  // user narrows by stage or status — but they DO honor the date/type/branch/search scope.
+  const scopedRows = useMemo(() => {
+    return computed.filter((r) => {
+      if (search.trim() && !r.student_name.toLowerCase().includes(search.trim().toLowerCase())) return false;
+      if (branchFilter !== 'ALL' && r.branch_code !== branchFilter) return false;
+      if (typeFilter !== 'ALL') {
+        const t = (r.type ?? '').toUpperCase();
+        if (t !== typeFilter) return false;
+      }
+      if (startDate || endDate) {
+        const docDay = r.doc_date ? r.doc_date.slice(0, 10) : '';
+        if (!docDay) return false;
+        if (startDate && docDay < startDate) return false;
+        if (endDate && docDay > endDate) return false;
+      }
+      return true;
+    });
+  }, [computed, search, branchFilter, typeFilter, startDate, endDate]);
+
   const counts = useMemo(() => {
     const c = { total: 0, on_track: 0, due_soon: 0, overdue: 0, completed: 0 };
-    for (const r of computed) {
+    for (const r of scopedRows) {
       c.total += 1;
       if (r.computed.status === 'ON_TRACK') c.on_track += 1;
       else if (r.computed.status === 'DUE_SOON') c.due_soon += 1;
@@ -162,7 +183,7 @@ export default function StudentTrackerTable({
       else if (r.computed.status === 'COMPLETED') c.completed += 1;
     }
     return c;
-  }, [computed]);
+  }, [scopedRows]);
 
   const handleConfirmExtend = async () => {
     if (!extendingFor || !onExtend) return;
@@ -282,41 +303,51 @@ export default function StudentTrackerTable({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
+        <div>
+          <table className="w-full text-left table-fixed">
+            <colgroup>
+              <col className="w-[22%]" />{/* Student */}
+              <col className="w-[7%]" /> {/* Branch */}
+              <col className="w-[7%]" /> {/* Package */}
+              <col className="w-[14%]" />{/* HQ Prep */}
+              <col className="w-[12%]" />{/* BM Pickup */}
+              <col className="w-[12%]" />{/* BM Handover */}
+              <col className="w-[12%]" />{/* Status */}
+              <col className="w-[10%]" />{/* Deadline */}
+              {canExtend && <col className="w-[8%]" />}
+            </colgroup>
             <thead className="bg-slate-50">
               <tr className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                <th className="px-4 py-3">Student</th>
-                <th className="px-4 py-3">Branch</th>
-                <th className="px-4 py-3">Package</th>
-                <th className="px-4 py-3">HQ Prep</th>
-                <th className="px-4 py-3">BM Pickup</th>
-                <th className="px-4 py-3">BM Handover</th>
-                <th className="px-4 py-3">Stage</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Deadline</th>
-                {canExtend && <th className="px-4 py-3">Action</th>}
+                <th className="px-2 py-3">Student</th>
+                <th className="px-2 py-3">Branch</th>
+                <th className="px-2 py-3">Package</th>
+                <th className="px-2 py-3">HQ Prep</th>
+                <th className="px-2 py-3">BM Pickup</th>
+                <th className="px-2 py-3">BM Handover</th>
+                <th className="px-2 py-3">Status</th>
+                <th className="px-2 py-3">Deadline</th>
+                {canExtend && <th className="px-2 py-3">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((r) => (
                 <tr key={r.student_id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 align-top">
-                    <div className="text-xs font-black text-slate-900">{r.student_name}</div>
+                  <td className="px-2 py-3 align-top">
+                    <div className="text-xs font-black text-slate-900 truncate" title={r.student_name}>{r.student_name}</div>
                     {r.doc_no && (
-                      <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{r.doc_no}</div>
+                      <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 truncate" title={r.doc_no}>{r.doc_no}</div>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-2 py-3 align-top">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">{r.branch_code || '—'}</span>
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-2 py-3 align-top">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{r.package || '—'}</span>
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-2 py-3 align-top">
                     <HqPrepCell row={r} />
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-2 py-3 align-top">
                     <StageCell
                       done={r.bm_pickup}
                       doneDate={r.bm_pickup_date}
@@ -324,7 +355,7 @@ export default function StudentTrackerTable({
                       isCurrent={r.computed.stage === 'BM_PICKUP'}
                     />
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-2 py-3 align-top">
                     <StageCell
                       done={r.student_received}
                       doneDate={r.student_received_date}
@@ -332,22 +363,20 @@ export default function StudentTrackerTable({
                       isCurrent={r.computed.stage === 'BM_HANDOVER'}
                     />
                   </td>
-                  <td className="px-4 py-3 align-top">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">
-                      {stageLabel(r.computed.stage)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${statusBadgeClasses(r.computed.status)}`}>
+                  <td className="px-2 py-3 align-top">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest whitespace-nowrap ${statusBadgeClasses(r.computed.status)}`}>
                       {statusLabel(r.computed.status)}
                     </span>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      {stageLabel(r.computed.stage)}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 align-top">
-                    <div className="text-xs font-black text-slate-800">
+                  <td className="px-2 py-3 align-top">
+                    <div className="text-xs font-black text-slate-800 whitespace-nowrap">
                       {formatTrackerDate(r.computed.deadline)}
                     </div>
                     {r.computed.daysRemaining !== null && r.computed.stage !== 'COMPLETED' && (
-                      <div className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${
+                      <div className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 whitespace-nowrap ${
                         r.computed.status === 'OVERDUE'
                           ? 'text-red-500'
                           : r.computed.status === 'DUE_SOON'
@@ -363,13 +392,13 @@ export default function StudentTrackerTable({
                     )}
                   </td>
                   {canExtend && (
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-2 py-3 align-top">
                       {r.computed.stage === 'COMPLETED' ? (
                         <span className="text-[9px] font-bold uppercase tracking-widest text-slate-300">—</span>
                       ) : (
                         <button
                           onClick={() => setExtendingFor(r)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest transition-colors"
+                          className="px-2 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest transition-colors"
                         >
                           Extend
                         </button>
@@ -380,7 +409,7 @@ export default function StudentTrackerTable({
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={canExtend ? 10 : 9} className="px-4 py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  <td colSpan={canExtend ? 9 : 8} className="px-2 py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
                     No students match the current filters.
                   </td>
                 </tr>
