@@ -3,6 +3,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { redirect } from 'next/navigation';
 import BranchDashboardClient from './BranchDashboardClient';
 import { db } from '@/lib/db';
+import { resolveStudentType } from '@/lib/studentUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,7 +88,12 @@ export default async function InventoryBranchPage() {
     orderBy: { doc_date: 'desc' },
   });
 
-  const trackerRows = trackerRaw.map((r) => ({
+  // Workflow only applies to NEW students — RENEWAL keeps existing kit, TRIAL
+  // gets nothing. Filter so KPI counts and table reflect only the population
+  // the SK + EG workflow actually applies to.
+  const trackerRows = trackerRaw
+    .filter((r) => resolveStudentType(r.type, r.package) === 'NEW')
+    .map((r) => ({
     student_id: r.student_id,
     student_name: r.student_name ?? 'Unknown',
     branch_code: r.branch_code ?? '',

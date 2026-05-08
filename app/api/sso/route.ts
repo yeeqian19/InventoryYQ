@@ -10,8 +10,14 @@ export async function GET(request: NextRequest) {
   const ssoSecret = process.env.SHARED_SSO_SECRET;
   const nextAuthSecret = process.env.NEXTAUTH_SECRET;
 
+  // Use NEXTAUTH_URL as the redirect base so error redirects point at the
+  // public hostname (e.g. inventory.ebright.my) instead of the container's
+  // internal address that request.url surfaces when behind a reverse proxy.
+  // Without this, users who hit the error paths get sent to localhost:3001.
+  const baseUrl = process.env.NEXTAUTH_URL || request.url;
+
   if (!token || !ssoSecret || !nextAuthSecret) {
-    return NextResponse.redirect(new URL("/login?error=MissingSSOConfig", request.url));
+    return NextResponse.redirect(new URL("/login?error=MissingSSOConfig", baseUrl));
   }
 
   try {
@@ -22,7 +28,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.redirect(new URL("/login?error=UserNotFound", request.url));
+      return NextResponse.redirect(new URL("/login?error=UserNotFound", baseUrl));
     }
 
     // Build the same token shape that the NextAuth jwt callback produces
@@ -44,11 +50,8 @@ export async function GET(request: NextRequest) {
       ? "__Secure-next-auth.session-token"
       : "next-auth.session-token";
 
-    // Use NEXTAUTH_URL as the base so the redirect points at the public
-    // hostname (e.g. staging-inventory.ebright.my) instead of the container's
-    // internal address that request.url surfaces when behind a reverse proxy.
     // Land on the role-aware home page (`/`) instead of `/dashboard`.
-    const baseUrl = process.env.NEXTAUTH_URL || request.url;
+    // baseUrl is declared at the top of the function and reused everywhere.
     const response = NextResponse.redirect(new URL("/", baseUrl));
 
     response.cookies.set(cookieName, sessionToken, {
@@ -62,6 +65,6 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("SSO Error:", error);
-    return NextResponse.redirect(new URL("/login?error=InvalidToken", request.url));
+    return NextResponse.redirect(new URL("/login?error=InvalidToken", baseUrl));
   }
 }

@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
+import { resolveStudentType } from '@/lib/studentUtils';
 import StudentTrackerClient from './StudentTrackerClient';
 import type { TrackerRow } from '@/components/StudentTrackerTable';
 
@@ -40,7 +41,13 @@ export default async function StudentTrackerPage() {
     orderBy: { doc_date: 'desc' },
   });
 
-  const rows: TrackerRow[] = raw.map((r) => ({
+  // The tracker workflow (SK + EG + BM Pickup + Handover) only applies to NEW
+  // students. RENEWAL students already have their kit; TRIAL students don't
+  // get one. Filter them out here so KPI counts and table rows only reflect
+  // the population the workflow actually applies to.
+  const rows: TrackerRow[] = raw
+    .filter((r) => resolveStudentType(r.type, r.package) === 'NEW')
+    .map((r) => ({
     student_id: r.student_id,
     student_name: r.student_name ?? 'Unknown',
     branch_code: r.branch_code ?? '',

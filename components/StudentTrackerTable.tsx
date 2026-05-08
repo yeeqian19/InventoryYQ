@@ -243,7 +243,7 @@ export default function StudentTrackerTable({
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-visible">
         <div className="px-3 lg:px-4 py-2.5 border-b border-slate-100 flex flex-wrap gap-2 items-center bg-slate-50/40">
           <select
             value={typeFilter}
