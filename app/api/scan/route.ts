@@ -60,7 +60,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         CASE
           WHEN UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || student_id::text)) = ${trimmedBarcode} THEN 'SK'
           WHEN UPPER(COALESCE(barcode_eg,
-            CASE WHEN package ILIKE '9M%' OR package ILIKE '12M%'
+            CASE WHEN package ILIKE '12M%'
               THEN branch_code || '-EG-' || student_id::text
               ELSE NULL END
           )) = ${trimmedBarcode} THEN 'EG'
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
       WHERE
         UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || student_id::text)) = ${trimmedBarcode}
         OR UPPER(COALESCE(barcode_eg,
-          CASE WHEN package ILIKE '9M%' OR package ILIKE '12M%'
+          CASE WHEN package ILIKE '12M%'
             THEN branch_code || '-EG-' || student_id::text
             ELSE NULL END
         )) = ${trimmedBarcode}

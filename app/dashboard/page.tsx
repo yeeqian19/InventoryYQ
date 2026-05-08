@@ -56,7 +56,7 @@ export default async function DashboardPage() {
     const sType = resolveStudentType(row.type, row.package);
     const items: FormattedItem[] = [];
 
-    // NEW: SK always + EG if 9M (LEGO) or 12M (SMARTWATCH)
+    // NEW: SK always + EG if 12M (SMARTWATCH)
     if (sType === 'NEW') {
       items.push({
         branch: finalBranch,

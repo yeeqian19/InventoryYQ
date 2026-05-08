@@ -54,13 +54,12 @@ async function fetchDashboardData() {
     // Rule 1: SK is ONLY for NEW students
     const hasSK = studentType === "NEW";
 
-    // Rule 2: EG is ONLY for NEW students with 9M or 12M
-    const is9M = /\b9\b/.test(pkg) || pkg.includes('9M');
+    // Rule 2: EG is ONLY for NEW students with 12M
     const is12M = /\b12\b/.test(pkg) || pkg.includes('12M');
-    const hasEG = studentType === "NEW" && (is9M || is12M);
+    const hasEG = studentType === "NEW" && is12M;
 
     // Rule 3: Determine exact gift type for the UI
-    const giftType = hasEG ? (is9M ? 'LEGO' : 'SMARTWATCH') : null;
+    const giftType = hasEG ? 'SMARTWATCH' : null;
 
     return {
       student_id: item.student_id.toString(),

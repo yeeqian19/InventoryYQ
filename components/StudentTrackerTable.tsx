@@ -206,9 +206,9 @@ export default function StudentTrackerTable({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3">
       {showSummaryCards && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
           <SummaryCard label="Total Active" value={counts.total} accent="slate" />
           <SummaryCard label="On-Track" value={counts.on_track} accent="emerald" />
           <SummaryCard label="Due Soon" value={counts.due_soon} accent="amber" />
@@ -217,11 +217,11 @@ export default function StudentTrackerTable({
       )}
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 lg:px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center bg-slate-50/40">
+        <div className="px-3 lg:px-4 py-2.5 border-b border-slate-100 flex flex-wrap gap-2 items-center bg-slate-50/40">
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
-            className="bg-emerald-50 border border-emerald-100 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 outline-none cursor-pointer focus:border-emerald-500"
+            className="bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-700 outline-none cursor-pointer focus:border-emerald-500"
           >
             {TYPE_FILTER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -230,25 +230,25 @@ export default function StudentTrackerTable({
           <select
             value={datePreset}
             onChange={(e) => handlePresetChange(e.target.value as DatePreset)}
-            className="bg-white border border-slate-200 rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer focus:border-emerald-500"
+            className="bg-white border border-slate-200 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer focus:border-emerald-500"
           >
             {DATE_PRESET_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-1.5">
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-full px-2.5 py-1">
             <input
               type="date"
               value={startDate}
               onChange={(e) => { setStartDate(e.target.value); setDatePreset('custom'); }}
-              className="text-[11px] font-bold text-slate-600 bg-transparent outline-none"
+              className="text-[10px] font-bold text-slate-600 bg-transparent outline-none"
             />
             <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">TO</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => { setEndDate(e.target.value); setDatePreset('custom'); }}
-              className="text-[11px] font-bold text-slate-600 bg-transparent outline-none"
+              className="text-[10px] font-bold text-slate-600 bg-transparent outline-none"
             />
           </div>
           {(startDate || endDate) && (
@@ -260,19 +260,19 @@ export default function StudentTrackerTable({
             </button>
           )}
         </div>
-        <div className="px-4 lg:px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center">
+        <div className="px-3 lg:px-4 py-2.5 border-b border-slate-100 flex flex-wrap gap-2 items-center">
           <input
             type="text"
             placeholder="Search student name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-emerald-500 transition-colors flex-1 min-w-0"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:border-emerald-500 transition-colors flex-1 min-w-[180px]"
           />
           {showBranchFilter && (
             <select
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
+              className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
             >
               <option value="ALL">All Branches</option>
               {branches.map((b) => (
@@ -283,7 +283,7 @@ export default function StudentTrackerTable({
           <select
             value={stageFilter}
             onChange={(e) => setStageFilter(e.target.value as TrackerStage | 'ALL')}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
           >
             {STAGE_FILTER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -292,13 +292,13 @@ export default function StudentTrackerTable({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as TrackerStatus | 'ALL')}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
           >
             {STATUS_FILTER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 lg:ml-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-auto">
             {filtered.length} / {counts.total}
           </span>
         </div>
@@ -509,10 +509,10 @@ function SummaryCard({ label, value, accent }: { label: string; value: number; a
     red: 'bg-red-500',
   };
   return (
-    <div className="bg-white p-4 lg:p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-      <div className={`absolute top-0 left-0 w-1.5 h-full ${accentMap[accent]}`}></div>
+    <div className="bg-white px-3 py-2.5 lg:px-4 lg:py-3 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+      <div className={`absolute top-0 left-0 w-1 h-full ${accentMap[accent]}`}></div>
       <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
-      <p className="text-2xl lg:text-4xl font-black text-slate-900 tracking-tighter">{value}</p>
+      <p className="text-xl lg:text-2xl font-black text-slate-900 tracking-tighter leading-none mt-1">{value}</p>
     </div>
   );
 }

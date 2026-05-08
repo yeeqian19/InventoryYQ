@@ -27,15 +27,15 @@ export default function StudentTrackerClient({ rows, userRole }: Props) {
   };
 
   return (
-    <div className="lg:ml-72 min-h-screen bg-[#f3f7f9] font-sans text-slate-800 overflow-x-hidden">
-      <div className="px-6 lg:px-10 py-6 lg:py-8 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10">
-        <h1 className="text-2xl lg:text-3xl font-black text-slate-900 uppercase tracking-tighter">Student Tracker</h1>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-          SK + Enrollment Gift workflow timeline · 10d HQ Prep → 8d BM Pickup → 6d BM Handover
-        </p>
-      </div>
+    <div className="lg:ml-72 min-h-screen bg-[#fcfdfd] font-sans text-slate-800 overflow-x-hidden">
+      <div className="p-4 lg:p-6 flex flex-col gap-4">
+        <div>
+          <h1 className="text-xl lg:text-2xl font-black text-slate-900 uppercase tracking-tighter">Student Tracker</h1>
+          <p className="text-[9px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+            SK + EG workflow · 10d HQ Prep → 8d BM Pickup → 6d BM Handover
+          </p>
+        </div>
 
-      <div className="p-6 lg:p-10">
         <StudentTrackerTable
           rows={rows}
           canExtend={canExtend}

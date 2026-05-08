@@ -2,7 +2,7 @@
 -- DATABASE CLEANUP & ACCURACY SCRIPT
 -- Business rules:
 --   NEW     → type='New',     package IN ('3M','6M','9M','12M')
---             SK always. EG if 9M (LEGO) or 12M (SMARTWATCH).
+--             SK always. EG if 12M (SMARTWATCH).
 --   RENEWAL → type='Renewal', package IN ('3M','6M','9M','12M')
 --             NO SK, NO EG. Student already received kit when they were New.
 --             Only used for extending enrolment. Not tracked in inventory.

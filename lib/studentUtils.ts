@@ -28,12 +28,12 @@ export function resolveStudentType(type?: string | null, pkg?: string | null): S
 
 /**
  * Returns true if the package qualifies for an Enrollment Gift (EG).
- * 9M → LEGO, 12M → SMARTWATCH
+ * Only 12M packages get an EG (the SMARTWATCH). 9M was previously
+ * eligible (LEGO) but the org dropped that.
  */
 export function hasEnrollmentGift(pkg?: string | null): boolean {
   const rawPkg = (pkg || '').trim().toUpperCase();
-  return /\b9M?\b/.test(rawPkg) || /\b12M?\b/.test(rawPkg) ||
-         rawPkg.includes('9M') || rawPkg.includes('12M');
+  return /\b12M?\b/.test(rawPkg) || rawPkg.includes('12M');
 }
 
 /**
@@ -42,6 +42,5 @@ export function hasEnrollmentGift(pkg?: string | null): boolean {
 export function giftNameForPackage(pkg?: string | null): string | null {
   const rawPkg = (pkg || '').trim().toUpperCase();
   if (rawPkg.includes('12M') || /\b12\b/.test(rawPkg)) return 'SMARTWATCH';
-  if (rawPkg.includes('9M')  || /\b9\b/.test(rawPkg))  return 'LEGO';
   return null;
 }

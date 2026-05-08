@@ -52,7 +52,7 @@ BEGIN
     -- 6. BARCODE GENERATOR (FIX: both barcodes now use the CLEANED branch_code from step 2)
     NEW.barcode_sk := NEW.branch_code || '-SK-' || LPAD(NEW.student_id::text, 6, '0');
 
-    IF NEW.package ILIKE '9M%' OR NEW.package ILIKE '12M%' THEN
+    IF NEW.package ILIKE '12M%' THEN
         NEW.barcode_eg := NEW.branch_code || '-EG-' || LPAD(NEW.student_id::text, 6, '0');
     ELSE
         NEW.barcode_eg := NULL;
@@ -67,7 +67,7 @@ UPDATE inventory_distribution_new
 SET
     barcode_sk = branch_code || '-SK-' || LPAD(student_id::text, 6, '0'),
     barcode_eg = CASE
-        WHEN package ILIKE '9M%' OR package ILIKE '12M%'
+        WHEN package ILIKE '12M%'
         THEN branch_code || '-EG-' || LPAD(student_id::text, 6, '0')
         ELSE NULL
     END
