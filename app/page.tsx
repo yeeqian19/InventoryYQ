@@ -55,7 +55,15 @@ export default async function RootPage() {
           ))}
         </div>
 
-        <LogoutButton />
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+          <a
+            href="https://portal.ebright.my/home"
+            className="px-7 py-2.5 min-h-[44px] text-[11px] font-black tracking-[2px] uppercase bg-transparent border-2 border-slate-200 rounded-full text-slate-400 cursor-pointer transition-all duration-200 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 hover:scale-105 no-underline inline-flex items-center"
+          >
+            ⬅️ Back to Portal
+          </a>
+          <LogoutButton />
+        </div>
 
       </div>
     </div>
