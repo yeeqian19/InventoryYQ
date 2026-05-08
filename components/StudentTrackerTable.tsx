@@ -204,7 +204,7 @@ export default function StudentTrackerTable({
   return (
     <div className="flex flex-col gap-3">
       {showSummaryCards && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 lg:gap-3">
           <SummaryCard
             label="Total Active"
             value={counts.total}
@@ -232,6 +232,13 @@ export default function StudentTrackerTable({
             accent="red"
             active={statusFilter === 'OVERDUE'}
             onClick={() => setStatusFilter(statusFilter === 'OVERDUE' ? 'ALL' : 'OVERDUE')}
+          />
+          <SummaryCard
+            label="Done"
+            value={counts.completed}
+            accent="blue"
+            active={statusFilter === 'COMPLETED'}
+            onClick={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
           />
         </div>
       )}
@@ -318,8 +325,8 @@ export default function StudentTrackerTable({
           </span>
         </div>
 
-        <div className="w-full overflow-hidden">
-          <table className="w-full text-left table-fixed">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left table-fixed min-w-[900px]">
             <colgroup>
               {canExtend ? (
                 <>
@@ -525,7 +532,7 @@ function SummaryCard({
 }: {
   label: string;
   value: number;
-  accent: 'slate' | 'emerald' | 'amber' | 'red';
+  accent: 'slate' | 'emerald' | 'amber' | 'red' | 'blue';
   active?: boolean;
   onClick?: () => void;
 }) {
@@ -534,12 +541,14 @@ function SummaryCard({
     emerald: 'bg-emerald-500',
     amber: 'bg-amber-500',
     red: 'bg-red-500',
+    blue: 'bg-blue-500',
   };
   const ringMap = {
     slate: 'ring-slate-300',
     emerald: 'ring-emerald-300',
     amber: 'ring-amber-300',
     red: 'ring-red-300',
+    blue: 'ring-blue-300',
   };
   return (
     <button

@@ -82,7 +82,7 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
     : SORTED_BRANCHES[0].code;
 
   const [activeBranch, setActiveBranch] = useState(defaultBranch);
-  const [activeMode, setActiveMode] = useState<'PICKUP' | 'HANDOVER' | 'HISTORY' | 'TRACKER'>('PICKUP');
+  const [activeMode, setActiveMode] = useState<'PICKUP' | 'HANDOVER' | 'HISTORY' | 'TRACKER'>('TRACKER');
 
   const branchTrackerRows = useMemo(
     () => trackerRows.filter((r) => r.branch_code === activeBranch),
@@ -301,22 +301,22 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
         </div>
 
         <nav className="flex-1 py-4 space-y-1 px-2">
-          <p className="text-[10px] font-black opacity-40 uppercase tracking-widest px-4 pb-2">Scanner Modes</p>
+          <p className="text-[10px] font-black opacity-40 uppercase tracking-widest px-4 pb-2">Branch Workspace</p>
+          <button onClick={() => { setActiveMode('TRACKER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+            className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'TRACKER' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
+            <span className="text-xl">⏱️</span> Student Tracker
+          </button>
           <button onClick={() => { setActiveMode('PICKUP'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
             className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'PICKUP' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
-            <span className="text-xl">🚚</span> 1. BM Pickup
+            <span className="text-xl">🚚</span> BM Pickup
           </button>
           <button onClick={() => { setActiveMode('HANDOVER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
             className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'HANDOVER' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
-            <span className="text-xl">📸</span> 2. Handover
+            <span className="text-xl">📸</span> Handover
           </button>
           <button onClick={() => { setActiveMode('HISTORY'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
             className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'HISTORY' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
-            <span className="text-xl">✅</span> 3. History
-          </button>
-          <button onClick={() => { setActiveMode('TRACKER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
-            className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-wide transition-all rounded-l-full ml-2 ${activeMode === 'TRACKER' ? 'bg-white text-[#7cb342] shadow-md' : 'text-white/80 hover:bg-white/10'}`}>
-            <span className="text-xl">⏱️</span> 4. Student Tracker
+            <span className="text-xl">✅</span> History
           </button>
         </nav>
 
@@ -536,6 +536,13 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
           <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">Home</span>
         </button>
         <button
+          onClick={() => { setActiveMode('TRACKER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
+          className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors ${activeMode === 'TRACKER' ? 'text-[#7cb342]' : 'text-slate-400'}`}
+        >
+          <span className="text-lg">⏱️</span>
+          <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">Tracker</span>
+        </button>
+        <button
           onClick={() => { setActiveMode('PICKUP'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
           className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors ${activeMode === 'PICKUP' ? 'text-amber-500' : 'text-slate-400'}`}
         >
@@ -555,13 +562,6 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
         >
           <span className="text-lg">✅</span>
           <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">History</span>
-        </button>
-        <button
-          onClick={() => { setActiveMode('TRACKER'); setIsCameraOpen(false); setPendingHandoverBarcode(''); setPendingPickupBarcode(''); setCapturedPhoto(null); }}
-          className={`flex-1 flex flex-col items-center justify-center py-3 transition-colors ${activeMode === 'TRACKER' ? 'text-[#7cb342]' : 'text-slate-400'}`}
-        >
-          <span className="text-lg">⏱️</span>
-          <span className="text-[9px] font-black uppercase tracking-wider mt-0.5">Tracker</span>
         </button>
       </div>
 
