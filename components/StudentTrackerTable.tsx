@@ -209,10 +209,34 @@ export default function StudentTrackerTable({
     <div className="flex flex-col gap-3">
       {showSummaryCards && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
-          <SummaryCard label="Total Active" value={counts.total} accent="slate" />
-          <SummaryCard label="On-Track" value={counts.on_track} accent="emerald" />
-          <SummaryCard label="Due Soon" value={counts.due_soon} accent="amber" />
-          <SummaryCard label="Overdue" value={counts.overdue} accent="red" />
+          <SummaryCard
+            label="Total Active"
+            value={counts.total}
+            accent="slate"
+            active={statusFilter === 'ALL'}
+            onClick={() => setStatusFilter('ALL')}
+          />
+          <SummaryCard
+            label="On-Track"
+            value={counts.on_track}
+            accent="emerald"
+            active={statusFilter === 'ON_TRACK'}
+            onClick={() => setStatusFilter(statusFilter === 'ON_TRACK' ? 'ALL' : 'ON_TRACK')}
+          />
+          <SummaryCard
+            label="Due Soon"
+            value={counts.due_soon}
+            accent="amber"
+            active={statusFilter === 'DUE_SOON'}
+            onClick={() => setStatusFilter(statusFilter === 'DUE_SOON' ? 'ALL' : 'DUE_SOON')}
+          />
+          <SummaryCard
+            label="Overdue"
+            value={counts.overdue}
+            accent="red"
+            active={statusFilter === 'OVERDUE'}
+            onClick={() => setStatusFilter(statusFilter === 'OVERDUE' ? 'ALL' : 'OVERDUE')}
+          />
         </div>
       )}
 
@@ -501,19 +525,45 @@ export default function StudentTrackerTable({
   );
 }
 
-function SummaryCard({ label, value, accent }: { label: string; value: number; accent: 'slate' | 'emerald' | 'amber' | 'red' }) {
+function SummaryCard({
+  label,
+  value,
+  accent,
+  active = false,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: 'slate' | 'emerald' | 'amber' | 'red';
+  active?: boolean;
+  onClick?: () => void;
+}) {
   const accentMap = {
     slate: 'bg-slate-400',
     emerald: 'bg-emerald-500',
     amber: 'bg-amber-500',
     red: 'bg-red-500',
   };
+  const ringMap = {
+    slate: 'ring-slate-300',
+    emerald: 'ring-emerald-300',
+    amber: 'ring-amber-300',
+    red: 'ring-red-300',
+  };
   return (
-    <div className="bg-white px-3 py-2.5 lg:px-4 lg:py-3 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`bg-white px-3 py-2.5 lg:px-4 lg:py-3 rounded-xl border shadow-sm relative overflow-hidden text-left transition-all active:scale-95 ${
+        active
+          ? `border-transparent ring-2 ${ringMap[accent]}`
+          : 'border-slate-200 hover:border-slate-300'
+      }`}
+    >
       <div className={`absolute top-0 left-0 w-1 h-full ${accentMap[accent]}`}></div>
       <p className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
       <p className="text-xl lg:text-2xl font-black text-slate-900 tracking-tighter leading-none mt-1">{value}</p>
-    </div>
+    </button>
   );
 }
 

@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import StudentManagerClient from './StudentManagerClient';
 import { resolveBranchCode } from '@/lib/branchUtils';
-import { resolveStudentType } from '@/lib/studentUtils';
+import { resolveStudentType, hasEnrollmentGift } from '@/lib/studentUtils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { canManageUsers, canUndoScans } from '@/lib/permissions';
@@ -42,7 +42,10 @@ export default async function StudentManagerPage() {
   const tableData = rawStudents.map((student) => {
     const finalBranch = resolveBranchCode(student.branch_code, student.doc_no);
     const sType = resolveStudentType(student.type, student.package);
-    const hasEG = student.barcode_eg && student.barcode_eg.trim() !== '';
+    // EG eligibility now follows the package rule (12M only). The DB may still
+    // have barcode_eg populated for legacy 9M rows from before the rule change,
+    // but we no longer surface them as "has EG".
+    const hasEG = hasEnrollmentGift(student.package);
 
     const skBarcode = student.barcode_sk || `${finalBranch}-SK-${student.student_id}`;
     const egBarcode = hasEG ? (student.barcode_eg || '') : 'N/A';
