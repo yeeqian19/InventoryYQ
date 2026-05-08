@@ -105,6 +105,7 @@ export default function StudentTrackerTable({
   const [extendingFor, setExtendingFor] = useState<TrackerRow | null>(null);
   const [extendDays, setExtendDays] = useState<number>(DEFAULT_EXTENSION_DAYS);
   const [extendReason, setExtendReason] = useState<string>('');
+  const [extendOtherReason, setExtendOtherReason] = useState<string>('');
   const [extendBusy, setExtendBusy] = useState(false);
   const [extendError, setExtendError] = useState<string | null>(null);
 
@@ -192,6 +193,14 @@ export default function StudentTrackerTable({
     return c;
   }, [scopedRows]);
 
+  const closeExtendModal = () => {
+    setExtendingFor(null);
+    setExtendDays(DEFAULT_EXTENSION_DAYS);
+    setExtendReason('');
+    setExtendOtherReason('');
+    setExtendError(null);
+  };
+
   const handleConfirmExtend = async () => {
     if (!extendingFor || !onExtend) return;
     if (!Number.isFinite(extendDays) || extendDays < 1 || extendDays > 90) {
@@ -202,13 +211,19 @@ export default function StudentTrackerTable({
       setExtendError('Please pick a reason for the extension.');
       return;
     }
+    // If "Other" is picked, use the typed text instead.
+    const finalReason = extendReason === 'OTHER'
+      ? extendOtherReason.trim()
+      : extendReason.trim();
+    if (extendReason === 'OTHER' && !finalReason) {
+      setExtendError('Please type your custom reason.');
+      return;
+    }
     setExtendBusy(true);
     setExtendError(null);
     try {
-      await onExtend(extendingFor, extendDays, extendReason.trim());
-      setExtendingFor(null);
-      setExtendDays(DEFAULT_EXTENSION_DAYS);
-      setExtendReason('');
+      await onExtend(extendingFor, extendDays, finalReason);
+      closeExtendModal();
     } catch (err) {
       setExtendError(err instanceof Error ? err.message : 'Failed to extend.');
     } finally {
@@ -474,7 +489,7 @@ export default function StudentTrackerTable({
       {extendingFor && canExtend && (
         <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
-          onClick={() => !extendBusy && setExtendingFor(null)}
+          onClick={() => !extendBusy && closeExtendModal()}
         >
           <div
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
@@ -511,7 +526,19 @@ export default function StudentTrackerTable({
                   {EXTENSION_REASONS.map((r) => (
                     <option key={r} value={r}>{r}</option>
                   ))}
+                  <option value="OTHER">Other (type your own)</option>
                 </select>
+                {extendReason === 'OTHER' && (
+                  <input
+                    type="text"
+                    value={extendOtherReason}
+                    onChange={(e) => setExtendOtherReason(e.target.value)}
+                    placeholder="Type your reason..."
+                    maxLength={120}
+                    autoFocus
+                    className="mt-2 w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-emerald-500"
+                  />
+                )}
               </div>
               {extendError && (
                 <div className="text-[10px] font-black uppercase tracking-widest text-red-600">{extendError}</div>
@@ -520,7 +547,7 @@ export default function StudentTrackerTable({
 
             <div className="mt-6 flex gap-2 justify-end">
               <button
-                onClick={() => setExtendingFor(null)}
+                onClick={closeExtendModal}
                 disabled={extendBusy}
                 className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
               >
