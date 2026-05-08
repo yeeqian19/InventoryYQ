@@ -101,7 +101,7 @@ export default function DashboardClient({
   }, [activeRegion]);
 
   const [selectedType, setSelectedType] = useState('NEW');
-  const [quickDate, setQuickDate] = useState('all');
+  const [quickDate, setQuickDate] = useState('lastWeek');
 
   const formatDateForInput = (date: Date) => {
     const y = date.getFullYear();
@@ -120,8 +120,22 @@ export default function DashboardClient({
     return { start: formatDateForInput(monday), end: formatDateForInput(today) };
   };
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const getLastWeekRange = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const currentDay = today.getDay();
+    const daysToCurrentMonday = currentDay === 0 ? 6 : currentDay - 1;
+    const currentMonday = new Date(today);
+    currentMonday.setDate(today.getDate() - daysToCurrentMonday);
+    const lastMonday = new Date(currentMonday);
+    lastMonday.setDate(currentMonday.getDate() - 7);
+    const lastSunday = new Date(lastMonday);
+    lastSunday.setDate(lastMonday.getDate() + 6);
+    return { start: formatDateForInput(lastMonday), end: formatDateForInput(lastSunday) };
+  };
+
+  const [startDate, setStartDate] = useState(() => getLastWeekRange().start);
+  const [endDate, setEndDate] = useState(() => getLastWeekRange().end);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional SSR hydration guard
   useEffect(() => { setHasMounted(true); }, []);
