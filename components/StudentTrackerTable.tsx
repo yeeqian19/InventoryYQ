@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import BranchMultiSelect from '@/components/BranchMultiSelect';
 import {
   computeTracker,
   formatTrackerDate,
@@ -82,7 +83,7 @@ export default function StudentTrackerTable({
   showSummaryCards = true,
 }: Props) {
   const [search, setSearch] = useState('');
-  const [branchFilter, setBranchFilter] = useState<string>('ALL');
+  const [branchFilter, setBranchFilter] = useState<string[]>([]); // empty = All Branches
   const [stageFilter, setStageFilter] = useState<TrackerStage | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<TrackerStatus | 'ALL'>('ALL');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('NEW');
@@ -117,17 +118,12 @@ export default function StudentTrackerTable({
     });
   }, [rows]);
 
-  const branches = useMemo(() => {
-    const set = new Set(rows.map((r) => r.branch_code).filter(Boolean));
-    return Array.from(set).sort();
-  }, [rows]);
-
   const filtered = useMemo(() => {
     return computed.filter((r) => {
       if (search.trim() && !r.student_name.toLowerCase().includes(search.trim().toLowerCase())) {
         return false;
       }
-      if (branchFilter !== 'ALL' && r.branch_code !== branchFilter) return false;
+      if (branchFilter.length > 0 && !branchFilter.includes(r.branch_code)) return false;
       if (stageFilter !== 'ALL' && r.computed.stage !== stageFilter) return false;
       if (statusFilter !== 'ALL' && r.computed.status !== statusFilter) return false;
       if (typeFilter !== 'ALL') {
@@ -158,7 +154,7 @@ export default function StudentTrackerTable({
   const scopedRows = useMemo(() => {
     return computed.filter((r) => {
       if (search.trim() && !r.student_name.toLowerCase().includes(search.trim().toLowerCase())) return false;
-      if (branchFilter !== 'ALL' && r.branch_code !== branchFilter) return false;
+      if (branchFilter.length > 0 && !branchFilter.includes(r.branch_code)) return false;
       if (typeFilter !== 'ALL') {
         const t = (r.type ?? '').toUpperCase();
         if (t !== typeFilter) return false;
@@ -293,16 +289,11 @@ export default function StudentTrackerTable({
             className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:border-emerald-500 transition-colors flex-1 min-w-[180px]"
           />
           {showBranchFilter && (
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none cursor-pointer"
-            >
-              <option value="ALL">All Branches</option>
-              {branches.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
+            <BranchMultiSelect
+              selected={branchFilter}
+              onChange={setBranchFilter}
+              className="min-w-[180px]"
+            />
           )}
           <select
             value={stageFilter}
