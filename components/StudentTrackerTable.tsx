@@ -303,18 +303,33 @@ export default function StudentTrackerTable({
           </span>
         </div>
 
-        <div>
+        <div className="w-full overflow-hidden">
           <table className="w-full text-left table-fixed">
             <colgroup>
-              <col className="w-[22%]" />{/* Student */}
-              <col className="w-[7%]" /> {/* Branch */}
-              <col className="w-[7%]" /> {/* Package */}
-              <col className="w-[14%]" />{/* HQ Prep */}
-              <col className="w-[12%]" />{/* BM Pickup */}
-              <col className="w-[12%]" />{/* BM Handover */}
-              <col className="w-[12%]" />{/* Status */}
-              <col className="w-[10%]" />{/* Deadline */}
-              {canExtend && <col className="w-[8%]" />}
+              {canExtend ? (
+                <>
+                  <col className="w-[19%]" />{/* Student */}
+                  <col className="w-[7%]" /> {/* Branch */}
+                  <col className="w-[7%]" /> {/* Package */}
+                  <col className="w-[13%]" />{/* HQ Prep */}
+                  <col className="w-[11%]" />{/* BM Pickup */}
+                  <col className="w-[11%]" />{/* BM Handover */}
+                  <col className="w-[12%]" />{/* Status */}
+                  <col className="w-[11%]" />{/* Deadline */}
+                  <col className="w-[9%]" /> {/* Action */}
+                </>
+              ) : (
+                <>
+                  <col className="w-[22%]" />{/* Student */}
+                  <col className="w-[8%]" /> {/* Branch */}
+                  <col className="w-[8%]" /> {/* Package */}
+                  <col className="w-[14%]" />{/* HQ Prep */}
+                  <col className="w-[12%]" />{/* BM Pickup */}
+                  <col className="w-[12%]" />{/* BM Handover */}
+                  <col className="w-[13%]" />{/* Status */}
+                  <col className="w-[11%]" />{/* Deadline */}
+                </>
+              )}
             </colgroup>
             <thead className="bg-slate-50">
               <tr className="text-[9px] font-black uppercase tracking-widest text-slate-500">
