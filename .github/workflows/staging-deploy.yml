@@ -15,5 +15,5 @@ jobs:
           host: 103.209.156.225
           username: ubuntu
           key: ${{ secrets.STAGING_SSH_KEY }}
-          command_timeout: 20m
+          command_timeout: 30m
           script: /home/ubuntu/deploy-staging.sh inventory
