@@ -59,7 +59,7 @@ async function fetchDashboardData() {
     const hasEG = studentType === "NEW" && is12M;
 
     // Rule 3: Determine exact gift type for the UI
-    const giftType = hasEG ? 'SMARTWATCH' : null;
+    const giftType = hasEG ? 'LEGO' : null;
 
     return {
       student_id: item.student_id.toString(),
