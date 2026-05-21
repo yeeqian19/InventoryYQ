@@ -27,7 +27,11 @@ BEGIN
     END IF;
 
     -- 2. BRANCH CLEANER & SWAP (removes ALL digits anywhere in the code)
-    NEW.branch_code := REGEXP_REPLACE(NEW.branch_code, '[0-9]', '', 'g');
+    -- TRIM is critical: AutoCount sometimes feeds branch_code with leading
+    -- spaces (e.g. " BSP"); without TRIM the generated barcode becomes
+    -- " BSP-SK-...", which the scan endpoint can't match against the printed
+    -- barcode "BSP-SK-..." and reports "barcode not found".
+    NEW.branch_code := TRIM(REGEXP_REPLACE(NEW.branch_code, '[0-9]', '', 'g'));
     IF NEW.branch_code = 'TTDI' THEN NEW.branch_code := 'KTG'; END IF;
 
     -- 3. DEPOSIT BOUNCER
@@ -62,13 +66,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Backfill barcodes for ALL existing rows where branch_code is already clean
+-- Backfill: TRIM existing branch_code values and rebuild barcodes from the
+-- cleaned value. This catches any legacy rows inserted before the TRIM was
+-- added to the trigger above.
 UPDATE inventory_distribution_new
 SET
-    barcode_sk = branch_code || '-SK-' || LPAD(student_id::text, 6, '0'),
-    barcode_eg = CASE
+    branch_code = TRIM(branch_code),
+    barcode_sk  = TRIM(branch_code) || '-SK-' || LPAD(student_id::text, 6, '0'),
+    barcode_eg  = CASE
         WHEN package ILIKE '12M%'
-        THEN branch_code || '-EG-' || LPAD(student_id::text, 6, '0')
+        THEN TRIM(branch_code) || '-EG-' || LPAD(student_id::text, 6, '0')
         ELSE NULL
     END
 WHERE branch_code IS NOT NULL;
