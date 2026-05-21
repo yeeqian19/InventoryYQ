@@ -192,12 +192,24 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
       });
     }
 
-    return queue.map(item => ({
-      student_id: item.student_id,
-      name: item.name,
-      pkg: item.package,
-      type: item.skBarcode ? 'SK' : 'EG',
-    }));
+    return queue.map(item => {
+      // Determine which item type(s) are actually in this queue for this student.
+      // PICKUP shows only items HQ has prepped; HANDOVER/HISTORY treat both
+      // barcodes as in-scope since bm_pickup/student_received are per-record.
+      const hasSK = activeMode === 'PICKUP'
+        ? Boolean(item.skPrep && item.skBarcode)
+        : Boolean(item.skBarcode);
+      const hasEG = activeMode === 'PICKUP'
+        ? Boolean(item.egPrep && item.egBarcode)
+        : Boolean(item.egBarcode);
+      const type = hasSK && hasEG ? 'SK + EG' : hasEG ? 'EG' : 'SK';
+      return {
+        student_id: item.student_id,
+        name: item.name,
+        pkg: item.package,
+        type,
+      };
+    });
   }, [branchData, activeMode, appliedSearchTerm, appliedStartDate, appliedEndDate]);
 
   const pendingStudentName = useMemo(() => {
@@ -510,7 +522,12 @@ export default function BranchDashboardClient({ initialData, userRole, userBranc
                     <div>
                       <h4 className="font-black text-slate-900 text-sm">{item.name}</h4>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${item.type === 'SK' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{item.type}</span>
+                        {item.type.includes('SK') && (
+                          <span className="text-[8px] font-black px-2 py-0.5 rounded uppercase bg-blue-100 text-blue-600">SK</span>
+                        )}
+                        {item.type.includes('EG') && (
+                          <span className="text-[8px] font-black px-2 py-0.5 rounded uppercase bg-purple-100 text-purple-600">EG</span>
+                        )}
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.pkg}</span>
                       </div>
                     </div>
