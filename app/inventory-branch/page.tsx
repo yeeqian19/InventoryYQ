@@ -3,7 +3,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { redirect } from 'next/navigation';
 import BranchDashboardClient from './BranchDashboardClient';
 import { db } from '@/lib/db';
-import { resolveStudentType } from '@/lib/studentUtils';
+import { resolveStudentType, hasEnrollmentGift } from '@/lib/studentUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,19 +43,28 @@ export default async function InventoryBranchPage() {
     orderBy: { doc_date: 'desc' },
   });
 
-  const formattedData = rawData.map(item => ({
+  const formattedData = rawData.map(item => {
+    const eligibleForEG = hasEnrollmentGift(item.package, item.student_name);
+    // Forced-EG students (e.g. Nik Amal / Nik Nayef on 9M) won't have
+    // barcode_eg populated by the DB trigger — fall back to the standard
+    // {branch}-EG-{id} format so the branch flow can recognize them.
+    const egFallback = eligibleForEG && item.branch_code
+      ? `${item.branch_code}-EG-${item.student_id}`
+      : null;
+    return {
     student_id:      String(item.student_id),
     name:            item.student_name || 'Unknown',
     branch:          item.branch_code || 'N/A',
     skBarcode:       item.barcode_sk || null,
-    egBarcode:       item.barcode_eg || null,
+    egBarcode:       item.barcode_eg || egFallback,
     skPrep:          item.sk_prep || false,
     egPrep:          item.eg_prep || false,
     bmPickup:        item.bm_pickup || false,
     studentReceived: item.student_received || false,
     studentType:     item.type || 'Unknown',
     package:         item.package || 'N/A',
-  }));
+    };
+  });
 
   // ── Student Tracker rows ──────────────────────────────────────────────
   // Branch managers only see their own branch; HQ/RM see all active rows.

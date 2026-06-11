@@ -42,13 +42,12 @@ export default async function StudentManagerPage() {
   const tableData = rawStudents.map((student) => {
     const finalBranch = resolveBranchCode(student.branch_code, student.doc_no);
     const sType = resolveStudentType(student.type, student.package);
-    // EG eligibility now follows the package rule (12M only). The DB may still
-    // have barcode_eg populated for legacy 9M rows from before the rule change,
-    // but we no longer surface them as "has EG".
-    const hasEG = hasEnrollmentGift(student.package);
+    // EG eligibility = 12M packages, plus the forced-EG name list in
+    // studentUtils (e.g. Nik Amal / Nik Nayef who get EG despite being 9M).
+    const hasEG = hasEnrollmentGift(student.package, student.student_name);
 
     const skBarcode = student.barcode_sk || `${finalBranch}-SK-${student.student_id}`;
-    const egBarcode = hasEG ? (student.barcode_eg || '') : 'N/A';
+    const egBarcode = hasEG ? (student.barcode_eg || `${finalBranch}-EG-${student.student_id}`) : 'N/A';
 
     let formattedDate = '';
     if (student.doc_date) {

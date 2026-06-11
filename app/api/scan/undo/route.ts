@@ -105,7 +105,7 @@ export async function POST(req: Request) {
         data: { namedCount: { increment: 1 }, packedCount: { increment: 1 } },
       });
     } else if (stage === 'eg_prep') {
-      const giftName = giftNameForPackage(record.package);
+      const giftName = giftNameForPackage(record.package, record.student_name);
       if (giftName) {
         await db.inventory.updateMany({
           where: { name: { equals: giftName, mode: 'insensitive' }, isSkPart: false },

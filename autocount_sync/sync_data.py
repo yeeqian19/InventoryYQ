@@ -2,6 +2,47 @@ import requests
 import psycopg2
 from datetime import datetime, timedelta
 
+# Valid package values in Autocount descriptions. When the parser finds one of
+# these, it treats everything BEFORE it as one or more sibling names — so
+# "Rania, Mikhael, Eryna, 6M, New" yields 3 students sharing pkg=6M, type=New.
+PACKAGES = {'3M', '6M', '9M', '12M'}
+
+
+def parse_description(desc):
+    """Return a list of (student_name, package, type, remark) tuples.
+
+    Multi-sibling row: "Rania, Mikhael, Eryna, 6M, New" -> 3 tuples.
+    Single student:    "Qarizh, 12M, New"               -> 1 tuple.
+    Trial / legacy:    "Ali, Trial"                     -> 1 tuple (no package match).
+    """
+    parts = [p.strip() for p in desc.split(',') if p.strip()]
+    if not parts:
+        return []
+
+    package_idx = -1
+    for i, p in enumerate(parts):
+        if p.upper() in PACKAGES:
+            package_idx = i
+            break
+
+    if package_idx <= 0:
+        # No valid package found, or package is the very first field with no
+        # name before it — fall back to legacy positional parsing.
+        return [(
+            parts[0] if len(parts) > 0 else None,
+            parts[1] if len(parts) > 1 else None,
+            parts[2] if len(parts) > 2 else None,
+            parts[3] if len(parts) > 3 else None,
+        )]
+
+    names         = parts[:package_idx]
+    package       = parts[package_idx]
+    invoice_type  = parts[package_idx + 1] if len(parts) > package_idx + 1 else None
+    remark        = parts[package_idx + 2] if len(parts) > package_idx + 2 else None
+
+    return [(name, package, invoice_type, remark) for name in names]
+
+
 # --- CONFIGURATION ---
 API_URL = "https://accounting-api.autocountcloud.com/10948/invoice/listing"
 HEADERS = {
@@ -80,32 +121,31 @@ def sync():
                     if not desc:
                         continue
 
-                    parts = [p.strip() for p in desc.split(',')]
-
-                    student_name  = parts[0] if len(parts) > 0 else None
-                    package       = parts[1] if len(parts) > 1 else None
-                    invoice_type  = parts[2] if len(parts) > 2 else None
-                    remark        = parts[3] if len(parts) > 3 else None
-
                     # Pass raw dept_no — the PostgreSQL trigger handles all cleaning
                     branch_code = item.get('deptNo') or None
 
-                    try:
-                        cur.execute("""
-                            INSERT INTO public.inventory_distribution_new
-                                (student_name, package, type, remark, branch_code, doc_no, doc_date)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT ON CONSTRAINT inventory_distribution_new_doc_no_student_name_key
-                            DO NOTHING
-                        """, (student_name, package, invoice_type, remark, branch_code, doc_no, doc_date))
+                    for student_name, package, invoice_type, remark in parse_description(desc):
+                        try:
+                            cur.execute("""
+                                INSERT INTO public.inventory_distribution_new
+                                    (student_name, package, type, remark, branch_code, doc_no, doc_date)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT ON CONSTRAINT inventory_distribution_new_doc_no_student_name_key
+                                DO UPDATE SET
+                                    package     = EXCLUDED.package,
+                                    type        = EXCLUDED.type,
+                                    remark      = EXCLUDED.remark,
+                                    branch_code = EXCLUDED.branch_code,
+                                    doc_date    = EXCLUDED.doc_date
+                            """, (student_name, package, invoice_type, remark, branch_code, doc_no, doc_date))
 
-                        if cur.rowcount > 0:
-                            records_synced += 1
+                            if cur.rowcount > 0:
+                                records_synced += 1
 
-                    except Exception as e:
-                        print(f"  [ERROR] Insert failed for doc_no={doc_no}, student={student_name}: {e}")
-                        conn.rollback()
-                        continue
+                        except Exception as e:
+                            print(f"  [ERROR] Upsert failed for doc_no={doc_no}, student={student_name}: {e}")
+                            conn.rollback()
+                            continue
 
             page += 1
 

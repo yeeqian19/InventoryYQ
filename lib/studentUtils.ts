@@ -26,11 +26,25 @@ export function resolveStudentType(type?: string | null, pkg?: string | null): S
   return 'TRIAL'; // no type, no real package = unconfirmed trial
 }
 
+// Students who get an Enrollment Gift regardless of their package.
+// Stored lowercase, trimmed; compared with the same normalization at lookup.
+const FORCED_EG_STUDENT_NAMES = new Set<string>([
+  'nik amal',
+  'nik nayef',
+]);
+
+function isForcedEGStudent(studentName?: string | null): boolean {
+  if (!studentName) return false;
+  return FORCED_EG_STUDENT_NAMES.has(studentName.trim().toLowerCase());
+}
+
 /**
  * Returns true if the package qualifies for an Enrollment Gift (EG).
- * Only 12M packages get an EG (the LEGO).
+ * Only 12M packages get an EG (the LEGO) — plus any explicit student-name
+ * overrides in FORCED_EG_STUDENT_NAMES.
  */
-export function hasEnrollmentGift(pkg?: string | null): boolean {
+export function hasEnrollmentGift(pkg?: string | null, studentName?: string | null): boolean {
+  if (isForcedEGStudent(studentName)) return true;
   const rawPkg = (pkg || '').trim().toUpperCase();
   return /\b12M?\b/.test(rawPkg) || rawPkg.includes('12M');
 }
@@ -38,7 +52,8 @@ export function hasEnrollmentGift(pkg?: string | null): boolean {
 /**
  * Returns the gift name for a given package string.
  */
-export function giftNameForPackage(pkg?: string | null): string | null {
+export function giftNameForPackage(pkg?: string | null, studentName?: string | null): string | null {
+  if (isForcedEGStudent(studentName)) return 'LEGO';
   const rawPkg = (pkg || '').trim().toUpperCase();
   if (rawPkg.includes('12M') || /\b12\b/.test(rawPkg)) return 'LEGO';
   return null;

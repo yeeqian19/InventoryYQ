@@ -8,6 +8,47 @@ const HEADERS = {
   'accept': 'application/json',
 };
 
+const PACKAGES = new Set(['3M', '6M', '9M', '12M']);
+
+type ParsedStudent = {
+  studentName: string;
+  pkg: string | null;
+  invoiceType: string | null;
+  remark: string | null;
+};
+
+// Multi-sibling row: "Rania, Mikhael, Eryna, 6M, New" -> 3 students sharing pkg=6M.
+// Falls back to legacy positional parsing when no 3M/6M/9M/12M is present
+// (covers trial students and other one-off rows).
+function parseDescription(desc: string): ParsedStudent[] {
+  const parts = desc.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return [];
+
+  let packageIdx = -1;
+  for (let i = 0; i < parts.length; i++) {
+    if (PACKAGES.has(parts[i].toUpperCase())) {
+      packageIdx = i;
+      break;
+    }
+  }
+
+  if (packageIdx <= 0) {
+    return [{
+      studentName: parts[0] ?? '',
+      pkg:         parts[1] ?? null,
+      invoiceType: parts[2] ?? null,
+      remark:      parts[3] ?? null,
+    }];
+  }
+
+  const names       = parts.slice(0, packageIdx);
+  const pkg         = parts[packageIdx];
+  const invoiceType = parts[packageIdx + 1] ?? null;
+  const remark      = parts[packageIdx + 2] ?? null;
+
+  return names.map((name) => ({ studentName: name, pkg, invoiceType, remark }));
+}
+
 // Pull last 7 days on every hourly run (catches all new invoices)
 function getDateRange() {
   const end = new Date();
@@ -50,25 +91,27 @@ export async function GET(request: NextRequest) {
           const desc = (item.description as string) || '';
           if (!desc) continue;
 
-          const parts       = desc.split(',').map((p: string) => p.trim());
-          const student_name = parts[0] || null;
-          const pkg          = parts[1] || null;
-          const type         = parts[2] || null;
-          const remark       = parts[3] || null;
-          const branch_code  = (item.deptNo as string) || null;
+          const branch_code = (item.deptNo as string) || null;
 
-          try {
-            await db.$executeRaw`
-              INSERT INTO public.inventory_distribution_new
-                (student_name, package, type, remark, branch_code, doc_no, doc_date)
-              VALUES
-                (${student_name}, ${pkg}, ${type}, ${remark}, ${branch_code}, ${doc_no as string}, ${doc_date ? new Date(doc_date as string) : null})
-              ON CONFLICT ON CONSTRAINT inventory_distribution_new_doc_no_student_name_key
-              DO NOTHING
-            `;
-            totalSynced++;
-          } catch {
-            // skip individual row errors
+          for (const { studentName, pkg, invoiceType, remark } of parseDescription(desc)) {
+            try {
+              await db.$executeRaw`
+                INSERT INTO public.inventory_distribution_new
+                  (student_name, package, type, remark, branch_code, doc_no, doc_date)
+                VALUES
+                  (${studentName}, ${pkg}, ${invoiceType}, ${remark}, ${branch_code}, ${doc_no as string}, ${doc_date ? new Date(doc_date as string) : null})
+                ON CONFLICT ON CONSTRAINT inventory_distribution_new_doc_no_student_name_key
+                DO UPDATE SET
+                  package     = EXCLUDED.package,
+                  type        = EXCLUDED.type,
+                  remark      = EXCLUDED.remark,
+                  branch_code = EXCLUDED.branch_code,
+                  doc_date    = EXCLUDED.doc_date
+              `;
+              totalSynced++;
+            } catch {
+              // skip individual row errors
+            }
           }
         }
       }
