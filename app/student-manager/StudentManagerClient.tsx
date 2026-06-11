@@ -354,6 +354,7 @@ export default function StudentManagerClient({ initialData, canDelete = false, c
                   <input type="checkbox" checked={selectedIds.length === filteredStudents.length && filteredStudents.length > 0} onChange={toggleAll} className="w-4 h-4 cursor-pointer" />
                 </th>
                 <th className="px-6 py-4 w-1/4">Student Name</th>
+                <th className="px-6 py-4 w-32">Doc Date</th>
                 <th className="px-6 py-4 w-32 text-center">Package</th>
                 <th className="px-6 py-4 w-24">Branch</th>
                 <th className="px-6 py-4 w-[420px]">
@@ -465,6 +466,9 @@ export default function StudentManagerClient({ initialData, canDelete = false, c
                       <p className="text-[9px] font-normal text-slate-400 uppercase tracking-widest mt-1.5">
                         {student.studentType === 'NEW' ? 'New' : student.studentType === 'RENEWAL' ? 'Renewal' : student.studentType === 'TRIAL' ? 'Trial' : student.studentType}
                       </p>
+                    </td>
+                    <td className="px-6 py-6 text-[11px] font-bold text-slate-600 tracking-tight">
+                      {student.date || '—'}
                     </td>
                     <td className="px-6 py-6 text-center">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getPackageColor(student.package)}`}>{student.package || 'N/A'}</span>
