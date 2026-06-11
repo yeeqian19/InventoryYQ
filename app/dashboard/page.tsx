@@ -69,8 +69,8 @@ export default async function DashboardPage() {
         studentType: sType,
       });
 
-      if (hasEnrollmentGift(row.package)) {
-        const giftName = giftNameForPackage(row.package) ?? 'EG';
+      if (hasEnrollmentGift(row.package, row.student_name)) {
+        const giftName = giftNameForPackage(row.package, row.student_name) ?? 'EG';
         items.push({
           branch: finalBranch,
           itemType: `Enrollment Gift (EG) - ${giftName}`,

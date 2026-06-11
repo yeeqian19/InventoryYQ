@@ -55,12 +55,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
       matched_type: string;
     };
 
+    // Students who get EG regardless of package (must match FORCED_EG_STUDENT_NAMES
+    // in lib/studentUtils.ts — keep in sync).
     const rows = await db.$queryRaw<RawRecord[]>`
       SELECT *,
         CASE
           WHEN UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || student_id::text)) = ${trimmedBarcode} THEN 'SK'
           WHEN UPPER(COALESCE(barcode_eg,
-            CASE WHEN package ILIKE '12M%'
+            CASE WHEN package ILIKE '12M%' OR LOWER(TRIM(student_name)) IN ('nik amal', 'nik nayef')
               THEN branch_code || '-EG-' || student_id::text
               ELSE NULL END
           )) = ${trimmedBarcode} THEN 'EG'
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
       WHERE
         UPPER(COALESCE(barcode_sk, branch_code || '-SK-' || student_id::text)) = ${trimmedBarcode}
         OR UPPER(COALESCE(barcode_eg,
-          CASE WHEN package ILIKE '12M%'
+          CASE WHEN package ILIKE '12M%' OR LOWER(TRIM(student_name)) IN ('nik amal', 'nik nayef')
             THEN branch_code || '-EG-' || student_id::text
             ELSE NULL END
         )) = ${trimmedBarcode}
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         });
       } else {
         // Deduct one unit of the matching enrollment gift
-        const giftName = giftNameForPackage(record.package);
+        const giftName = giftNameForPackage(record.package, record.student_name);
         if (giftName) {
           await db.inventory.updateMany({
             where: { name: { equals: giftName, mode: 'insensitive' }, isSkPart: false, currentCount: { gt: 0 } },
