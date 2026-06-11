@@ -34,13 +34,18 @@ BEGIN
     NEW.branch_code := TRIM(REGEXP_REPLACE(NEW.branch_code, '[0-9]', '', 'g'));
     IF NEW.branch_code = 'TTDI' THEN NEW.branch_code := 'KTG'; END IF;
 
-    -- 3. DEPOSIT BOUNCER
-    IF (
-        NEW.remark ILIKE '%Deposit%' OR
-        NEW.remark ILIKE '%First Payment%' OR
-        NEW.remark ILIKE '%Booking%'
-    ) THEN
-        RETURN NULL;
+    -- 3. REMARK FILTER (whitelist)
+    -- ALLOW rows where remark is empty/null (standard enrollment) OR
+    -- contains 'first', 'balance', or 'new'. BLOCK everything else
+    -- (Deposit, Booking, 2nd Payment, 3rd Payment, 4th Payment, etc.).
+    IF NEW.remark IS NOT NULL AND TRIM(NEW.remark) <> '' THEN
+        IF NOT (
+            NEW.remark ILIKE '%first%' OR
+            NEW.remark ILIKE '%balance%' OR
+            NEW.remark ILIKE '%new%'
+        ) THEN
+            RETURN NULL;
+        END IF;
     END IF;
 
     -- 4. DATA UNTANGLER
