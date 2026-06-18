@@ -1,10 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getMobileSession } from '@/lib/mobileAuth';
 import { resolveStudentType } from '@/lib/studentUtils';
-import { computeTracker } from '@/lib/trackerUtils';
+import { computeTracker, rangeForPreset, type DatePreset } from '@/lib/trackerUtils';
 
 export const dynamic = 'force-dynamic';
+
+function docDateWhere(preset: string): { doc_date?: { gte: Date; lte: Date } } {
+  const { start, end } = rangeForPreset((preset || 'all') as DatePreset);
+  if (!start || !end) return {};
+  return { doc_date: { gte: new Date(`${start}T00:00:00`), lte: new Date(`${end}T23:59:59.999`) } };
+}
 
 // Read endpoint for the mobile Student Tracker screen.
 // Mirrors app/student-tracker/page.tsx (NEW students only) and pre-computes the
@@ -15,7 +21,7 @@ function shortDate(d: Date | null): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getMobileSession();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,8 +32,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  const preset = request.nextUrl.searchParams.get('preset') ?? 'thisWeek';
   const raw = await db.inventory_distribution_new.findMany({
-    where: { is_active: true },
+    where: { is_active: true, ...docDateWhere(preset) },
     select: {
       student_id: true,
       student_name: true,
