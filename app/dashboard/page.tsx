@@ -41,6 +41,7 @@ export default async function DashboardPage() {
       type: true,
       package: true,
       barcode_eg: true,
+      student_name: true,
     }
   });
 
