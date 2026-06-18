@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { getServerSession } from 'next-auth';
+import { decode } from 'next-auth/jwt';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import type { UserRole } from '@/types';
 import { DEMO_ACCOUNTS, DEMO_TOKEN_PREFIX } from './mobileDemo';
@@ -28,15 +29,39 @@ export async function getMobileSession(): Promise<MobileSession | null> {
     };
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    const store = await cookies();
-    const token = store.get('next-auth.session-token')?.value ?? '';
-    if (token.startsWith(DEMO_TOKEN_PREFIX)) {
-      const email = token.slice(DEMO_TOKEN_PREFIX.length).toLowerCase();
-      const demo = DEMO_ACCOUNTS[email];
-      if (demo) {
-        return { user: { id: 'demo', email, name: demo.name, role: demo.role, branchCode: demo.branchCode } };
+  const store = await cookies();
+  const token = store.get('next-auth.session-token')?.value ?? '';
+
+  // Dev demo token (no DB/secret needed). Disabled in production.
+  if (process.env.NODE_ENV !== 'production' && token.startsWith(DEMO_TOKEN_PREFIX)) {
+    const email = token.slice(DEMO_TOKEN_PREFIX.length).toLowerCase();
+    const demo = DEMO_ACCOUNTS[email];
+    if (demo) {
+      return { user: { id: 'demo', email, name: demo.name, role: demo.role, branchCode: demo.branchCode } };
+    }
+  }
+
+  // Real mobile token. The RN app always sends the NextAuth-encoded JWT under the
+  // NON-secure cookie name `next-auth.session-token`. On HTTPS, getServerSession()
+  // above looks for `__Secure-next-auth.session-token` and misses it — so decode the
+  // token directly here with the same secret the mobile login route used to encode it.
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (token && secret && !token.startsWith(DEMO_TOKEN_PREFIX)) {
+    try {
+      const decoded = await decode({ token, secret });
+      if (decoded && (decoded.email || decoded.sub)) {
+        return {
+          user: {
+            id: decoded.sub ?? '',
+            email: (decoded.email as string) ?? '',
+            name: (decoded.name as string) ?? 'User',
+            role: ((decoded as { role?: UserRole }).role ?? 'USER_RM') as UserRole,
+            branchCode: (decoded as { branchCode?: string }).branchCode ?? '',
+          },
+        };
       }
+    } catch {
+      // Invalid/expired token → fall through to unauthorized.
     }
   }
 
