@@ -15,36 +15,21 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        console.log("🔑 LOGIN ATTEMPT FOR:", credentials.email);
-
         try {
           // 1. Fetch user from DB
           const user = await db.users.findFirst({
             where: { email: { equals: credentials.email.trim(), mode: 'insensitive' } },
           });
 
-          if (!user) {
-            console.log("❌ USER NOT FOUND IN HEIDISQL");
-            return null;
-          }
-
-          console.log("✅ USER FOUND! ROLE:", user.role);
+          if (!user) return null;
 
           // 2. Password Check Logic
-          if (!user.password_hash) {
-            console.log("❌ NO PASSWORD HASH ON RECORD");
-            return null;
-          }
+          if (!user.password_hash) return null;
 
           // Normalize PHP-style $2y$ hashes to Node.js $2b$ format
           const normalizedHash = user.password_hash.replace(/^\$2y\$/, '$2b$');
           const isHashValid = await bcrypt.compare(credentials.password, normalizedHash);
-          if (!isHashValid) {
-            console.log("❌ PASSWORD MISMATCH");
-            return null;
-          }
-
-          console.log("🎉 LOGIN SUCCESSFUL!");
+          if (!isHashValid) return null;
 
           // 3. Return user object for the session
           return {

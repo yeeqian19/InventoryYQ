@@ -37,10 +37,6 @@ export async function GET() {
       type: true,
       package: true,
       barcode_eg: true,
-      // NOTE: the web page.tsx calls hasEnrollmentGift(pkg, student_name) but omits
-      // student_name from its select, so the forced-EG override (commit 45d8a8d) never
-      // fires on the web dashboard. We select it here so mobile reflects the intended
-      // behaviour. Flagged to the team — the web select should be fixed to match.
       student_name: true,
     },
   });
