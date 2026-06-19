@@ -10,12 +10,31 @@ function fmt(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+// "Now" pinned to Malaysia time (UTC+8) regardless of the device timezone, so the
+// computed window matches the web (whose users' browsers are in Malaysia) even when
+// the device/emulator clock is set to another zone. Local getters on the returned
+// Date yield KL wall-clock components.
+const KL_OFFSET_MS = 8 * 60 * 60 * 1000;
+export function klNow(): Date {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utcMs + KL_OFFSET_MS);
+}
+
+// KL-midnight instant for a 'YYYY-MM-DD' day boundary (for absolute-timestamp compares).
+export function klDayStart(day: string): Date {
+  return new Date(`${day}T00:00:00.000+08:00`);
+}
+export function klDayEnd(day: string): Date {
+  return new Date(`${day}T23:59:59.999+08:00`);
+}
+
 export type Range = { start: string; end: string };
 
 // Used by dashboard, student-manager, scan-log, student-tracker.
 // Matches getThisWeekRange/getLastWeekRange (Monday-anchored) == rangeForPreset.
 export function stdRange(preset: string): Range {
-  const now = new Date();
+  const now = klNow();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   switch (preset) {
     case 'thisWeek': {
@@ -51,7 +70,7 @@ export function stdRange(preset: string): Range {
 // Used by RM Dashboard. NOTE: its 'this-week' is Sunday-anchored (start = now - getDay()),
 // unlike stdRange — replicated verbatim from RM_DashboardClient.calculateDates.
 export function rmRange(range: string): Range {
-  const now = new Date();
+  const now = klNow();
   switch (range) {
     case 'this-week': {
       const start = new Date(now);

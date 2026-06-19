@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import Dropdown from '@/components/Dropdown';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
-import { rmRange } from '@/lib/webDates';
+import { rmRange, klDayStart, klDayEnd } from '@/lib/webDates';
 import { BRANCHES_SORTED } from '@/constants/branches';
 
 // Converted from app/RM_Dashboard/RM_DashboardClient.tsx — mobile adaptation.
@@ -18,7 +18,12 @@ type Student = {
   branch: string;
   pkg: string;
   type: 'NEW' | 'RENEWAL' | 'TRIAL';
-  stage: 'not_prepared' | 'prepared' | 'bm_pickup' | 'received';
+  sk_prep: boolean;
+  eg_prep: boolean;
+  bm_pickup: boolean;
+  student_received: boolean;
+  hasSK: boolean;
+  hasEG: boolean;
   created_at: string | null;
 };
 
@@ -31,13 +36,17 @@ const DATE_OPTIONS = [
   { label: 'All Time', value: 'all' },
 ];
 
-const STAGE_COLOR: Record<Student['stage'], string> = {
+type Stage = 'not_prepared' | 'prepared' | 'bm_pickup' | 'received';
+function stageOf(s: Student): Stage {
+  return s.student_received ? 'received' : s.bm_pickup ? 'bm_pickup' : s.sk_prep ? 'prepared' : 'not_prepared';
+}
+const STAGE_COLOR: Record<Stage, string> = {
   not_prepared: '#fb7185',
   prepared: '#10b981',
   bm_pickup: '#3b82f6',
   received: '#a855f7',
 };
-const STAGE_LABEL: Record<Student['stage'], string> = {
+const STAGE_LABEL: Record<Stage, string> = {
   not_prepared: 'Not Prepared',
   prepared: 'Prepared',
   bm_pickup: 'Picked Up',
@@ -46,49 +55,69 @@ const STAGE_LABEL: Record<Student['stage'], string> = {
 
 export default function RMDashboardScreen() {
   const router = useRouter();
-  const [itemToggle, setItemToggle] = useState('ALL');
-  const [activeType, setActiveType] = useState('ALL');
+  const [itemToggle, setItemToggle] = useState('ALL'); // ALL | SK | EG
+  const [activeType, setActiveType] = useState('NEW'); // matches the web default
   const [rangeSelect, setRangeSelect] = useState('this-month');
   const [studentSearch, setStudentSearch] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useApi<{ students: Student[] }>('/api/mobile/rm-dashboard');
 
+  // Replicates web RM_DashboardClient.tsx branchStats exactly (type/date/search filter,
+  // then per-branch SK/EG-toggle displayedList + prepared/pickup/received counting).
   const branchStats = useMemo(() => {
-    // Same date filter as the web RM dashboard (new Date(created_at) vs local day bounds).
-    const { start, end } = rmRange(rangeSelect);
-    const dStart = start ? new Date(start) : null;
-    const dEnd = end ? new Date(end) : null;
-    if (dStart) dStart.setHours(0, 0, 0, 0);
-    if (dEnd) dEnd.setHours(23, 59, 59, 999);
-    const inRange = (s: Student) => {
-      if (!dStart && !dEnd) return true;
-      const d = s.created_at ? new Date(s.created_at) : null;
-      return !!d && (!dStart || d >= dStart) && (!dEnd || d <= dEnd);
-    };
-    const studentsByCode = new Map<string, Student[]>();
-    for (const s of data?.students ?? []) {
-      if (!inRange(s)) continue;
-      const list = studentsByCode.get(s.branch);
-      if (list) list.push(s);
-      else studentsByCode.set(s.branch, [s]);
+    let filtered = data?.students ?? [];
+
+    if (activeType !== 'ALL') {
+      filtered = filtered.filter((s) => s.type?.toUpperCase() === activeType.toUpperCase());
     }
-    // Show ALL branches (like the web default), attaching live students where present.
+
+    // Date filter on created_at — KL day bounds so it matches the web regardless of device TZ.
+    const { start, end } = rmRange(rangeSelect);
+    if (start || end) {
+      const dStart = start ? klDayStart(start) : null;
+      const dEnd = end ? klDayEnd(end) : null;
+      filtered = filtered.filter((s) => {
+        const d = s.created_at ? new Date(s.created_at) : null;
+        return !!d && (!dStart || d >= dStart) && (!dEnd || d <= dEnd);
+      });
+    }
+
+    if (studentSearch) {
+      filtered = filtered.filter((s) => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
+    }
+
     return BRANCHES_SORTED.map((branch) => {
-      const b = { code: branch.code, name: branch.name, students: studentsByCode.get(branch.code) ?? [] };
-      let list = b.students;
-      if (activeType !== 'ALL') list = list.filter((s) => s.type === activeType);
-      if (studentSearch) list = list.filter((s) => s.name.toLowerCase().includes(studentSearch.toLowerCase()));
+      const students = filtered.filter((s) => s.branch === branch.code);
+
+      // SK/EG toggle decides which students count (ALL = has either).
+      const displayedList = students.filter((s) => {
+        if (itemToggle === 'SK') return s.hasSK;
+        if (itemToggle === 'EG') return s.hasEG;
+        return s.hasSK || s.hasEG;
+      });
+
+      const prep = displayedList.filter((s) => {
+        const isPrepared =
+          itemToggle === 'EG'
+            ? s.eg_prep
+            : itemToggle === 'SK'
+              ? s.sk_prep
+              : (s.hasSK ? s.sk_prep : true) && (s.hasEG ? s.eg_prep : true);
+        return isPrepared && !s.bm_pickup;
+      }).length;
+
       return {
-        ...b,
-        list,
-        total: list.length,
-        prep: list.filter((s) => s.stage === 'prepared').length,
-        pickup: list.filter((s) => s.stage === 'bm_pickup').length,
-        received: list.filter((s) => s.stage === 'received').length,
+        code: branch.code,
+        name: branch.name,
+        list: displayedList,
+        total: displayedList.length,
+        prep,
+        pickup: displayedList.filter((s) => s.bm_pickup && !s.student_received).length,
+        received: displayedList.filter((s) => s.student_received).length,
       };
     });
-  }, [data, activeType, studentSearch, rangeSelect]);
+  }, [data, activeType, itemToggle, studentSearch, rangeSelect]);
 
   const totalUnits = branchStats.reduce((a, b) => a + b.total, 0);
   const totalPrep = branchStats.reduce((a, b) => a + b.prep, 0);
@@ -206,13 +235,16 @@ export default function RMDashboardScreen() {
                   {row.list.length === 0 ? (
                     <Text className="text-center text-slate-400 font-bold text-sm italic py-4">No data.</Text>
                   ) : (
-                    row.list.map((s) => (
-                      <View key={s.id} className="bg-white p-4 rounded-2xl border-l-8 border border-slate-100" style={{ borderLeftColor: STAGE_COLOR[s.stage] }}>
+                    row.list.map((s) => {
+                      const st = stageOf(s);
+                      return (
+                      <View key={s.id} className="bg-white p-4 rounded-2xl border-l-8 border border-slate-100" style={{ borderLeftColor: STAGE_COLOR[st] }}>
                         <Text className="text-[12px] font-black text-slate-700 uppercase tracking-tighter">{s.name}</Text>
                         <Text className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">{s.pkg}</Text>
-                        <Text className="text-[8px] font-black uppercase tracking-widest mt-1" style={{ color: STAGE_COLOR[s.stage] }}>{STAGE_LABEL[s.stage]}</Text>
+                        <Text className="text-[8px] font-black uppercase tracking-widest mt-1" style={{ color: STAGE_COLOR[st] }}>{STAGE_LABEL[st]}</Text>
                       </View>
-                    ))
+                      );
+                    })
                   )}
                 </View>
               )}

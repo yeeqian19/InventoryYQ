@@ -7,6 +7,11 @@ import Donut from '@/components/Donut';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
 import { stdRange } from '@/lib/webDates';
+import { BRANCHES_SORTED } from '@/constants/branches';
+
+// Only count rows whose branch is in the master list — same as the web dashboard
+// (DashboardClient filters to valid BRANCH_MASTER_LIST codes before summing).
+const VALID_BRANCH_CODES = new Set(BRANCHES_SORTED.map((b) => b.code));
 
 // Converted from app/dashboard/DashboardClient.tsx — MOBILE view only.
 // recharts -> Donut (react-native-svg) + View-based bars; <select> -> Dropdown.
@@ -49,7 +54,7 @@ export default function DashboardScreen() {
   const items = data?.items ?? [];
 
   const filteredData = useMemo(() => {
-    let rows = items;
+    let rows = items.filter((i) => VALID_BRANCH_CODES.has(i.branch));
     if (selectedType !== 'All') {
       rows = rows.filter((i) => i.studentType.toUpperCase() === selectedType.toUpperCase());
     }

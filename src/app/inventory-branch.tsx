@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import Dropdown from '@/components/Dropdown';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
+import { useAuth } from '@/contexts/AuthContext';
 import { BRANCH_OPTIONS } from '@/constants/branches';
 
 // Converted from app/inventory-branch/BranchDashboardClient.tsx — MOBILE view.
@@ -20,7 +21,7 @@ type InventoryItem = {
   branch: string;
   pkg: string;
   type: 'SK' | 'EG' | 'SK + EG';
-  state: 'EXPECTED' | 'READY' | 'DONE';
+  state: 'EXPECTED' | 'READY' | 'DONE' | 'NONE';
 };
 
 const DATE_OPTIONS = [
@@ -41,7 +42,12 @@ const MODE_ACCENT: Record<Mode, { text: string; bg: string; border: string }> = 
 export default function InventoryBranchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [activeBranch, setActiveBranch] = useState('RBY');
+  const { user } = useAuth();
+  // A branch manager is pinned to their own branch (like the web); HQ/RM pick any.
+  const isBM = user?.role === 'USER_BM';
+  const [pickedBranch, setPickedBranch] = useState('RBY');
+  const activeBranch = isBM && user?.branchCode ? user.branchCode : pickedBranch;
+  const setActiveBranch = setPickedBranch;
   const [activeMode, setActiveMode] = useState<Mode>('TRACKER');
   const [quickDate, setQuickDate] = useState('all');
   const [search, setSearch] = useState('');

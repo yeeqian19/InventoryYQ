@@ -68,10 +68,23 @@ export default function StudentManagerScreen() {
 
   const students = useMemo(() => {
     let list = data?.students ?? [];
+    // Sibling-split, same as web processedInitialData: "Ali & Sara" -> two rows.
+    list = list.flatMap((s) => {
+      const siblings = s.name.split(/&|,|\band\b/i).map((x) => x.trim()).filter((x) => x.length > 0);
+      if (siblings.length > 1) {
+        return siblings.map((nm, i) => ({ ...s, id: `${s.id}-${i}`, name: nm }));
+      }
+      return [s];
+    });
+    // Active-system barcode filter, same as web: drop rows whose SK/EG barcode is missing/N/A.
+    list = list.filter((s) => {
+      const code = activeSystem === 'SK' ? s.skBarcode : s.egBarcode;
+      return !!code && code !== 'N/A' && code.trim() !== '';
+    });
     if (search) list = list.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
     if (typeFilter !== 'All') list = list.filter((s) => s.type.toLowerCase() === typeFilter.toLowerCase());
     return list;
-  }, [data, search, typeFilter]);
+  }, [data, search, typeFilter, activeSystem]);
 
   const toggle = (id: string) => setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 

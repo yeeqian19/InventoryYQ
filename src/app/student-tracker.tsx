@@ -77,20 +77,26 @@ export default function StudentTrackerScreen() {
   const { data, loading, error, reload } = useApi<{ rows: Row[] }>(`/api/mobile/student-tracker?start=${start}&end=${end}`);
   const rows = useMemo(() => data?.rows ?? [], [data]);
 
-  const counts = useMemo(() => ({
-    total: rows.length,
-    on_track: rows.filter((r) => r.status === 'ON_TRACK').length,
-    due_soon: rows.filter((r) => r.status === 'DUE_SOON').length,
-    overdue: rows.filter((r) => r.status === 'OVERDUE').length,
-    completed: rows.filter((r) => r.status === 'COMPLETED').length,
-  }), [rows]);
-
-  const filtered = useMemo(() => rows.filter((r) => {
+  // KPI cards are scoped to search + type (NOT status), exactly like the web's
+  // scopedRows — so the counts move with search/type but stay stable when you tap a card.
+  const scopedRows = useMemo(() => rows.filter((r) => {
     if (search && !r.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (typeFilter !== 'ALL' && r.type !== typeFilter) return false;
-    if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
     return true;
-  }), [rows, search, typeFilter, statusFilter]);
+  }), [rows, search, typeFilter]);
+
+  const counts = useMemo(() => ({
+    total: scopedRows.length,
+    on_track: scopedRows.filter((r) => r.status === 'ON_TRACK').length,
+    due_soon: scopedRows.filter((r) => r.status === 'DUE_SOON').length,
+    overdue: scopedRows.filter((r) => r.status === 'OVERDUE').length,
+    completed: scopedRows.filter((r) => r.status === 'COMPLETED').length,
+  }), [scopedRows]);
+
+  const filtered = useMemo(
+    () => scopedRows.filter((r) => statusFilter === 'ALL' || r.status === statusFilter),
+    [scopedRows, statusFilter],
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
