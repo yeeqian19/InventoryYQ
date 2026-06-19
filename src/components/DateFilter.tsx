@@ -49,6 +49,7 @@ export default function DateFilter({
     setPicking(null);
     if (!d) return;
     const v = fmt(d);
+    setPreset('custom'); // editing a date switches to Custom, like the web
     if (which === 'start') {
       setStart(v);
       onChange({ start: v, end });
@@ -64,24 +65,23 @@ export default function DateFilter({
       <View className="flex-row">
         <Dropdown value={preset} options={presets} onChange={choosePreset} />
       </View>
-      {preset === 'custom' && (
-        <View className="flex-row gap-2">
-          <Pressable
-            onPress={() => setPicking('start')}
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5"
-          >
-            <Text className="text-[8px] font-black text-slate-400 uppercase tracking-widest">From</Text>
-            <Text className="text-xs font-bold text-slate-700 mt-0.5">{start || '—'}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setPicking('end')}
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5"
-          >
-            <Text className="text-[8px] font-black text-slate-400 uppercase tracking-widest">To</Text>
-            <Text className="text-xs font-bold text-slate-700 mt-0.5">{end || '—'}</Text>
-          </Pressable>
-        </View>
-      )}
+      {/* From/To always visible (like the web). Tapping opens the picker and switches to Custom. */}
+      <View className="flex-row gap-2">
+        <Pressable
+          onPress={() => setPicking('start')}
+          className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5"
+        >
+          <Text className="text-[8px] font-black text-slate-400 uppercase tracking-widest">From</Text>
+          <Text className="text-xs font-bold text-slate-700 mt-0.5">{start || '—'}</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setPicking('end')}
+          className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5"
+        >
+          <Text className="text-[8px] font-black text-slate-400 uppercase tracking-widest">To</Text>
+          <Text className="text-xs font-bold text-slate-700 mt-0.5">{end || '—'}</Text>
+        </Pressable>
+      </View>
       {picking && (
         <DateTimePicker
           value={new Date(`${(picking === 'start' ? start : end) || today}T00:00:00`)}
