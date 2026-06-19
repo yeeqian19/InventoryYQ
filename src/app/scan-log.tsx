@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Dropdown from '@/components/Dropdown';
+import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
 import { stdRange } from '@/lib/webDates';
@@ -28,6 +30,7 @@ const DATE_OPTIONS = [
   { label: 'Last Week', value: 'lastWeek' },
   { label: 'This Month', value: 'thisMonth' },
   { label: 'Last Month', value: 'lastMonth' },
+  { label: 'Custom', value: 'custom' },
 ];
 
 const ACTION_COLOR: Record<string, string> = {
@@ -42,12 +45,12 @@ function actionClasses(action: string): string {
 }
 
 export default function ScanLogScreen() {
-  const [quickDate, setQuickDate] = useState('thisWeek'); // matches the web default
+  const router = useRouter();
+  const [range, setRange] = useState(() => stdRange('thisWeek')); // matches the web default
   const [search, setSearch] = useState('');
 
-  // Date window computed on-device (same math as the web), applied server-side.
-  const { start, end } = stdRange(quickDate);
-  const { data, loading, error, reload } = useApi<{ logs: Log[] }>(`/api/mobile/scan-log?start=${start}&end=${end}`);
+  // Date window (preset or custom) computed on-device, applied server-side.
+  const { data, loading, error, reload } = useApi<{ logs: Log[] }>(`/api/mobile/scan-log?start=${range.start}&end=${range.end}`);
 
   const logs = useMemo(
     () => (data?.logs ?? []).filter((l) => !search || l.student.toLowerCase().includes(search.toLowerCase()) || l.branch.toLowerCase().includes(search.toLowerCase())),
@@ -57,9 +60,14 @@ export default function ScanLogScreen() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <ScrollView contentContainerClassName="p-4 gap-4 pb-10" showsVerticalScrollIndicator={false}>
-        <View>
-          <Text className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Scan History Log</Text>
-          <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Master Audit Trail</Text>
+        <View className="flex-row items-start justify-between">
+          <View>
+            <Text className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Scan History Log</Text>
+            <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Master Audit Trail</Text>
+          </View>
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
+            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
+          </Pressable>
         </View>
 
         {/* FILTERS */}
@@ -71,7 +79,7 @@ export default function ScanLogScreen() {
             onChangeText={setSearch}
             className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-bold text-slate-700"
           />
-          <Dropdown value={quickDate} options={DATE_OPTIONS} onChange={setQuickDate} />
+          <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
         </View>
 
         <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{logs.length} logs</Text>

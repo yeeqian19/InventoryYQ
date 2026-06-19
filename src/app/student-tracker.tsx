@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Dropdown from '@/components/Dropdown';
+import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
 import { stdRange } from '@/lib/webDates';
@@ -62,19 +64,20 @@ const DATE_OPTIONS = [
   { label: 'This Month', value: 'thisMonth' },
   { label: 'Last Month', value: 'lastMonth' },
   { label: 'All Time', value: 'all' },
+  { label: 'Custom', value: 'custom' },
 ];
 
 export default function StudentTrackerScreen() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<Status | 'ALL'>('ALL');
-  const [quickDate, setQuickDate] = useState('lastWeek'); // matches the web tracker default
+  const router = useRouter();
+  const [range, setRange] = useState(() => stdRange('lastWeek')); // matches the web tracker default
   const [extendRow, setExtendRow] = useState<Row | null>(null);
   const [extendDays, setExtendDays] = useState('7');
   const [reason, setReason] = useState('');
 
-  const { start, end } = stdRange(quickDate);
-  const { data, loading, error, reload } = useApi<{ rows: Row[] }>(`/api/mobile/student-tracker?start=${start}&end=${end}`);
+  const { data, loading, error, reload } = useApi<{ rows: Row[] }>(`/api/mobile/student-tracker?start=${range.start}&end=${range.end}`);
   const rows = useMemo(() => data?.rows ?? [], [data]);
 
   // KPI cards are scoped to search + type (NOT status), exactly like the web's
@@ -101,9 +104,14 @@ export default function StudentTrackerScreen() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <ScrollView contentContainerClassName="p-4 gap-4 pb-10" showsVerticalScrollIndicator={false}>
-        <View>
-          <Text className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Student Tracker</Text>
-          <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">10d HQ Prep → 8d Pickup → 6d Handover</Text>
+        <View className="flex-row items-start justify-between">
+          <View>
+            <Text className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Student Tracker</Text>
+            <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">10d HQ Prep → 8d Pickup → 6d Handover</Text>
+          </View>
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
+            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
+          </Pressable>
         </View>
 
         {/* SUMMARY CARDS (tap to filter) */}
@@ -128,7 +136,7 @@ export default function StudentTrackerScreen() {
             <Dropdown value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
             <Dropdown value={statusFilter} options={STATUS_OPTIONS} onChange={(v) => setStatusFilter(v as Status | 'ALL')} />
           </View>
-          <Dropdown value={quickDate} options={DATE_OPTIONS} onChange={setQuickDate} />
+          <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="lastWeek" onChange={setRange} />
         </View>
 
         <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{filtered.length} / {counts.total} students</Text>

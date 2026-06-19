@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import Dropdown from '@/components/Dropdown';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
+import DateFilter from '@/components/DateFilter';
 import { rmRange, klDayStart, klDayEnd } from '@/lib/webDates';
 import { BRANCHES_SORTED } from '@/constants/branches';
 
@@ -34,6 +35,7 @@ const DATE_OPTIONS = [
   { label: 'This Week', value: 'this-week' },
   { label: 'Last Week', value: 'last-week' },
   { label: 'All Time', value: 'all' },
+  { label: 'Custom', value: 'custom' },
 ];
 
 type Stage = 'not_prepared' | 'prepared' | 'bm_pickup' | 'received';
@@ -57,7 +59,7 @@ export default function RMDashboardScreen() {
   const router = useRouter();
   const [itemToggle, setItemToggle] = useState('ALL'); // ALL | SK | EG
   const [activeType, setActiveType] = useState('NEW'); // matches the web default
-  const [rangeSelect, setRangeSelect] = useState('this-month');
+  const [range, setRange] = useState(() => rmRange('this-month'));
   const [studentSearch, setStudentSearch] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -73,7 +75,7 @@ export default function RMDashboardScreen() {
     }
 
     // Date filter on created_at — KL day bounds so it matches the web regardless of device TZ.
-    const { start, end } = rmRange(rangeSelect);
+    const { start, end } = range;
     if (start || end) {
       const dStart = start ? klDayStart(start) : null;
       const dEnd = end ? klDayEnd(end) : null;
@@ -117,7 +119,7 @@ export default function RMDashboardScreen() {
         received: displayedList.filter((s) => s.student_received).length,
       };
     });
-  }, [data, activeType, itemToggle, studentSearch, rangeSelect]);
+  }, [data, activeType, itemToggle, studentSearch, range]);
 
   const totalUnits = branchStats.reduce((a, b) => a + b.total, 0);
   const totalPrep = branchStats.reduce((a, b) => a + b.prep, 0);
@@ -164,7 +166,7 @@ export default function RMDashboardScreen() {
             ))}
           </View>
         </View>
-        <Dropdown value={rangeSelect} options={DATE_OPTIONS} onChange={setRangeSelect} />
+        <DateFilter presets={DATE_OPTIONS} rangeFor={rmRange} initial="this-month" onChange={setRange} />
 
         {/* STAT CARDS — 2x2 */}
         <View className="flex-row flex-wrap -mx-1">

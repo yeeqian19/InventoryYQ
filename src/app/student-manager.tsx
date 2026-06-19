@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Dropdown from '@/components/Dropdown';
+import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
 import { stdRange } from '@/lib/webDates';
@@ -36,6 +38,7 @@ const DATE_OPTIONS = [
   { label: 'Last Week', value: 'lastWeek' },
   { label: 'This Month', value: 'thisMonth' },
   { label: 'Last Month', value: 'lastMonth' },
+  { label: 'Custom', value: 'custom' },
 ];
 
 function packageColor(pkg: string) {
@@ -54,17 +57,17 @@ const PILL_TONE: Record<string, string> = {
 };
 
 export default function StudentManagerScreen() {
+  const router = useRouter();
   const [activeSystem, setActiveSystem] = useState<'SK' | 'EG'>('SK');
   const [search, setSearch] = useState('');
   // Defaults mirror the web Student Manager (New students, This Week) so the
   // mobile view matches the site and only fetches that window server-side.
   const [typeFilter, setTypeFilter] = useState('New');
-  const [quickDate, setQuickDate] = useState('thisWeek');
+  const [range, setRange] = useState(() => stdRange('thisWeek'));
   const [selected, setSelected] = useState<string[]>([]);
 
-  // Date window computed on-device (same math as the web), applied server-side.
-  const { start, end } = stdRange(quickDate);
-  const { data, loading, error, reload } = useApi<{ students: Student[] }>(`/api/mobile/students?start=${start}&end=${end}`);
+  // Date window (preset or custom) computed on-device, applied server-side.
+  const { data, loading, error, reload } = useApi<{ students: Student[] }>(`/api/mobile/students?start=${range.start}&end=${range.end}`);
 
   const students = useMemo(() => {
     let list = data?.students ?? [];
@@ -91,7 +94,12 @@ export default function StudentManagerScreen() {
   return (
     <SafeAreaView className="flex-1 bg-surface-appBg" edges={['top']}>
       <ScrollView contentContainerClassName="p-4 gap-4 pb-10" showsVerticalScrollIndicator={false}>
-        <Text className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Student Manager</Text>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Student Manager</Text>
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
+            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
+          </Pressable>
+        </View>
 
         {/* FILTERS */}
         <View className="bg-white rounded-[28px] border border-slate-100 p-4 gap-3 shadow-sm">
@@ -102,10 +110,10 @@ export default function StudentManagerScreen() {
             onChangeText={setSearch}
             className="bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700"
           />
-          <View className="flex-row gap-2">
+          <View className="flex-row">
             <Dropdown value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
-            <Dropdown value={quickDate} options={DATE_OPTIONS} onChange={setQuickDate} />
           </View>
+          <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
           {/* SK/EG system toggle */}
           <View className="flex-row bg-slate-200/60 p-1.5 rounded-2xl self-start">
             <Pressable onPress={() => { setActiveSystem('SK'); setSelected([]); }} className={`px-6 py-2 rounded-xl ${activeSystem === 'SK' ? 'bg-white' : ''}`}>

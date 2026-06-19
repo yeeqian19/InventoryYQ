@@ -7,6 +7,7 @@ import Donut from '@/components/Donut';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
 import { useAuth } from '@/contexts/AuthContext';
+import DateFilter from '@/components/DateFilter';
 import { stdRange } from '@/lib/webDates';
 import { BRANCHES_SORTED } from '@/constants/branches';
 
@@ -48,6 +49,7 @@ const DATE_OPTIONS = [
   { label: 'Last Week', value: 'lastWeek' },
   { label: 'This Month', value: 'thisMonth' },
   { label: 'Last Month', value: 'lastMonth' },
+  { label: 'Custom', value: 'custom' },
 ];
 
 type MobileTab = 'overview' | 'charts' | 'branches';
@@ -59,7 +61,7 @@ export default function DashboardScreen() {
   const hqLinks = HQ_LINKS.filter((l) => l.roles.includes(user?.role ?? ''));
   const [mobileTab, setMobileTab] = useState<MobileTab>('overview');
   const [selectedType, setSelectedType] = useState('NEW');
-  const [quickDate, setQuickDate] = useState('lastWeek'); // matches the web Dashboard default
+  const [range, setRange] = useState(() => stdRange('lastWeek')); // matches the web Dashboard default
 
   const { data, loading, error, reload } = useApi<{ items: InventoryItem[] }>('/api/mobile/dashboard');
   const items = data?.items ?? [];
@@ -70,12 +72,12 @@ export default function DashboardScreen() {
       rows = rows.filter((i) => i.studentType.toUpperCase() === selectedType.toUpperCase());
     }
     // Same client-side date filter as the web (item.date is the UTC date-part string).
-    const { start, end } = stdRange(quickDate);
+    const { start, end } = range;
     if (start && end) {
       rows = rows.filter((i) => i.date >= start && i.date <= end);
     }
     return rows;
-  }, [items, selectedType, quickDate]);
+  }, [items, selectedType, range]);
 
   const totalItems = filteredData.reduce((s, i) => s + i.total, 0);
   const totalPrepared = filteredData.reduce((s, i) => s + i.prepared, 0);
@@ -118,10 +120,10 @@ export default function DashboardScreen() {
             Real-time inventory tracking
           </Text>
         </View>
-        <View className="flex-row gap-2">
+        <View className="flex-row">
           <Dropdown value={selectedType} options={TYPE_OPTIONS} onChange={setSelectedType} />
-          <Dropdown value={quickDate} options={DATE_OPTIONS} onChange={setQuickDate} />
         </View>
+        <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="lastWeek" onChange={setRange} />
       </View>
 
       {/* SCROLLABLE CONTENT */}
