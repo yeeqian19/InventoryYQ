@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Dropdown from '@/components/Dropdown';
 import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
@@ -57,68 +56,81 @@ export default function ScanLogScreen() {
     [data, search],
   );
 
+  const renderLog = ({ item: l }: { item: Log }) => (
+    <View className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-4">
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1 pr-2">
+          <Text className="text-sm font-black text-slate-800">{l.student}</Text>
+          <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{l.doc_no} · Type {l.item_type}</Text>
+          <Text className="text-xs font-bold text-blue-500 mt-1">{l.barcode}</Text>
+        </View>
+        <View className="items-end gap-1.5">
+          <View className={`px-3 py-1 rounded-full ${actionClasses(l.action)}`}>
+            <Text className={`text-[9px] font-black uppercase tracking-widest ${actionClasses(l.action).split(' ')[1]}`}>{l.action}</Text>
+          </View>
+          <View className="bg-emerald-50 border border-emerald-100 px-3 py-0.5 rounded-full">
+            <Text className="text-[9px] font-black uppercase tracking-widest text-emerald-600">{l.branch}</Text>
+          </View>
+        </View>
+      </View>
+      <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-slate-50">
+        <Text className="text-[11px] font-bold text-slate-500">{l.date} · {l.time}</Text>
+        <Text className="text-[10px] font-bold text-slate-400">{l.by}</Text>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <ScrollView contentContainerClassName="p-4 gap-4 pb-10" showsVerticalScrollIndicator={false}>
-        <View className="flex-row items-start justify-between">
-          <View>
-            <Text className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Scan History Log</Text>
-            <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Master Audit Trail</Text>
-          </View>
-          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
-            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
-          </Pressable>
-        </View>
-
-        {/* FILTERS */}
-        <View className="bg-white rounded-2xl border border-slate-200 p-3 gap-3">
-          <TextInput
-            placeholder="Search student or branch..."
-            placeholderTextColor="#94a3b8"
-            value={search}
-            onChangeText={setSearch}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-bold text-slate-700"
-          />
-          <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
-        </View>
-
-        <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{logs.length} logs</Text>
-
-        {/* LOADING / ERROR */}
-        <ScreenState loading={loading} error={error} onRetry={reload} />
-
-        {/* LOG CARDS */}
-        {!loading && !error && (logs.length === 0 ? (
-          <View className="items-center py-16">
-            <Text className="text-4xl mb-3">📭</Text>
-            <Text className="text-sm font-black text-slate-400 uppercase tracking-widest">No logs found</Text>
-          </View>
-        ) : (
-          logs.map((l) => (
-            <View key={l.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-              <View className="flex-row justify-between items-start">
-                <View className="flex-1 pr-2">
-                  <Text className="text-sm font-black text-slate-800">{l.student}</Text>
-                  <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{l.doc_no} · Type {l.item_type}</Text>
-                  <Text className="text-xs font-bold text-blue-500 mt-1">{l.barcode}</Text>
-                </View>
-                <View className="items-end gap-1.5">
-                  <View className={`px-3 py-1 rounded-full ${actionClasses(l.action)}`}>
-                    <Text className={`text-[9px] font-black uppercase tracking-widest ${actionClasses(l.action).split(' ')[1]}`}>{l.action}</Text>
-                  </View>
-                  <View className="bg-emerald-50 border border-emerald-100 px-3 py-0.5 rounded-full">
-                    <Text className="text-[9px] font-black uppercase tracking-widest text-emerald-600">{l.branch}</Text>
-                  </View>
-                </View>
+      <FlatList
+        data={!loading && !error ? logs : []}
+        keyExtractor={(l) => String(l.id)}
+        renderItem={renderLog}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerClassName="p-4 pb-10"
+        removeClippedSubviews
+        initialNumToRender={10}
+        windowSize={11}
+        ListHeaderComponent={
+          <View className="gap-4 mb-4">
+            <View className="flex-row items-start justify-between">
+              <View>
+                <Text className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Scan History Log</Text>
+                <Text className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Master Audit Trail</Text>
               </View>
-              <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-slate-50">
-                <Text className="text-[11px] font-bold text-slate-500">{l.date} · {l.time}</Text>
-                <Text className="text-[10px] font-bold text-slate-400">{l.by}</Text>
-              </View>
+              <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
+                <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
+              </Pressable>
             </View>
-          ))
-        ))}
-      </ScrollView>
+
+            {/* FILTERS */}
+            <View className="bg-white rounded-2xl border border-slate-200 p-3 gap-3">
+              <TextInput
+                placeholder="Search student or branch..."
+                placeholderTextColor="#94a3b8"
+                value={search}
+                onChangeText={setSearch}
+                className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-bold text-slate-700"
+              />
+              <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
+            </View>
+
+            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{logs.length} logs</Text>
+
+            {/* LOADING / ERROR */}
+            <ScreenState loading={loading} error={error} onRetry={reload} />
+          </View>
+        }
+        ListEmptyComponent={
+          !loading && !error ? (
+            <View className="items-center py-16">
+              <Text className="text-4xl mb-3">📭</Text>
+              <Text className="text-sm font-black text-slate-400 uppercase tracking-widest">No logs found</Text>
+            </View>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }

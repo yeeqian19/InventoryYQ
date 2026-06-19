@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Dropdown from '@/components/Dropdown';
@@ -91,114 +91,129 @@ export default function StudentManagerScreen() {
 
   const toggle = (id: string) => setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
+  const renderStudent = ({ item: s }: { item: Student }) => {
+    const code = activeSystem === 'SK' ? s.skBarcode : s.egBarcode;
+    const isSel = selected.includes(s.id);
+    return (
+      <Pressable onPress={() => toggle(s.id)} className={`bg-white rounded-[28px] border-2 p-5 mb-4 ${isSel ? 'border-blue-400' : 'border-slate-100'}`}>
+        <View className="flex-row justify-between items-start">
+          <View className="flex-1 pr-3">
+            <Text className="font-black text-slate-900 text-base leading-tight">{s.name}</Text>
+            <Text className="text-[10px] text-slate-400 font-bold mt-0.5">{s.doc_no} · {s.date}</Text>
+            <Text className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+              {s.type === 'NEW' ? 'New' : s.type === 'RENEWAL' ? 'Renewal' : 'Trial'}
+            </Text>
+          </View>
+          <View className="items-end gap-2">
+            <View className={`px-3 py-1 rounded-full ${packageColor(s.package)}`}>
+              <Text className={`text-[10px] font-black uppercase tracking-widest ${packageColor(s.package).split(' ')[1]}`}>{s.package}</Text>
+            </View>
+            <Text className="text-xs font-black text-emerald-600">{s.branch}</Text>
+          </View>
+        </View>
+
+        {/* STAGE PILLS */}
+        {(s.stages.sk_prep || s.stages.eg_prep || s.stages.bm_pickup || s.stages.received) && (
+          <View className="flex-row flex-wrap gap-1.5 mt-3">
+            {s.stages.sk_prep && <StagePill label={`SK Prep ${s.stages.sk_prep}`} tone="blue" />}
+            {s.stages.eg_prep && <StagePill label={`EG Prep ${s.stages.eg_prep}`} tone="purple" />}
+            {s.stages.bm_pickup && <StagePill label={`Pickup ${s.stages.bm_pickup}`} tone="amber" />}
+            {s.stages.received && <StagePill label={`Received ${s.stages.received}`} tone="emerald" />}
+          </View>
+        )}
+
+        {/* CODE + QR placeholder */}
+        <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-slate-50">
+          <View className="flex-1">
+            {/* Decorative barcode stripes */}
+            <View className="flex-row h-8 items-stretch gap-px">
+              {Array.from({ length: 28 }).map((_, i) => (
+                <View key={i} className="bg-slate-800" style={{ width: i % 3 === 0 ? 3 : 1 }} />
+              ))}
+            </View>
+            <Text className="text-[9px] font-mono font-bold text-slate-500 uppercase mt-1">{code}</Text>
+          </View>
+          <View className="w-12 h-12 ml-3 border border-slate-200 rounded-lg items-center justify-center">
+            <Text className="text-[7px] font-black text-slate-300">QR</Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-surface-appBg" edges={['top']}>
-      <ScrollView contentContainerClassName="p-4 gap-4 pb-10" showsVerticalScrollIndicator={false}>
-        <View className="flex-row items-center justify-between">
-          <Text className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Student Manager</Text>
-          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
-            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
-          </Pressable>
-        </View>
+      <FlatList
+        data={!loading && !error ? students : []}
+        keyExtractor={(s) => s.id}
+        renderItem={renderStudent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerClassName="p-4 pb-10"
+        removeClippedSubviews
+        initialNumToRender={10}
+        windowSize={11}
+        ListHeaderComponent={
+          <View className="gap-4 mb-4">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-3xl font-black italic uppercase tracking-tighter text-slate-900">Student Manager</Text>
+              <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
+                <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
+              </Pressable>
+            </View>
 
-        {/* FILTERS */}
-        <View className="bg-white rounded-[28px] border border-slate-100 p-4 gap-3 shadow-sm">
-          <TextInput
-            placeholder="Search name..."
-            placeholderTextColor="#94a3b8"
-            value={search}
-            onChangeText={setSearch}
-            className="bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700"
-          />
-          <View className="flex-row">
-            <Dropdown value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
-          </View>
-          <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
-          {/* SK/EG system toggle */}
-          <View className="flex-row bg-slate-200/60 p-1.5 rounded-2xl self-start">
-            <Pressable onPress={() => { setActiveSystem('SK'); setSelected([]); }} className={`px-6 py-2 rounded-xl ${activeSystem === 'SK' ? 'bg-white' : ''}`}>
-              <Text className={`text-[10px] font-black ${activeSystem === 'SK' ? 'text-blue-600' : 'text-slate-400'}`}>SK SYSTEM</Text>
-            </Pressable>
-            <Pressable onPress={() => { setActiveSystem('EG'); setSelected([]); }} className={`px-6 py-2 rounded-xl ${activeSystem === 'EG' ? 'bg-white' : ''}`}>
-              <Text className={`text-[10px] font-black ${activeSystem === 'EG' ? 'text-purple-600' : 'text-slate-400'}`}>EG SYSTEM</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* SELECTION BAR */}
-        <View className="flex-row items-center justify-between px-1">
-          <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{students.length} Students</Text>
-          {selected.length > 0 && (
-            <Text className="text-[11px] font-black text-blue-600 uppercase tracking-widest">{selected.length} selected</Text>
-          )}
-        </View>
-
-        {/* LOADING / ERROR / EMPTY */}
-        <ScreenState
-          loading={loading}
-          error={error}
-          empty={!loading && !error && students.length === 0}
-          onRetry={reload}
-          emptyText="No students found"
-        />
-
-        {/* STUDENT CARDS */}
-        {!loading && !error && students.map((s) => {
-          const code = activeSystem === 'SK' ? s.skBarcode : s.egBarcode;
-          const isSel = selected.includes(s.id);
-          return (
-            <Pressable key={s.id} onPress={() => toggle(s.id)} className={`bg-white rounded-[28px] border-2 p-5 ${isSel ? 'border-blue-400' : 'border-slate-100'}`}>
-              <View className="flex-row justify-between items-start">
-                <View className="flex-1 pr-3">
-                  <Text className="font-black text-slate-900 text-base leading-tight">{s.name}</Text>
-                  <Text className="text-[10px] text-slate-400 font-bold mt-0.5">{s.doc_no} · {s.date}</Text>
-                  <Text className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                    {s.type === 'NEW' ? 'New' : s.type === 'RENEWAL' ? 'Renewal' : 'Trial'}
-                  </Text>
-                </View>
-                <View className="items-end gap-2">
-                  <View className={`px-3 py-1 rounded-full ${packageColor(s.package)}`}>
-                    <Text className={`text-[10px] font-black uppercase tracking-widest ${packageColor(s.package).split(' ')[1]}`}>{s.package}</Text>
-                  </View>
-                  <Text className="text-xs font-black text-emerald-600">{s.branch}</Text>
-                </View>
+            {/* FILTERS */}
+            <View className="bg-white rounded-[28px] border border-slate-100 p-4 gap-3 shadow-sm">
+              <TextInput
+                placeholder="Search name..."
+                placeholderTextColor="#94a3b8"
+                value={search}
+                onChangeText={setSearch}
+                className="bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700"
+              />
+              <View className="flex-row">
+                <Dropdown value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
               </View>
+              <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
+              {/* SK/EG system toggle */}
+              <View className="flex-row bg-slate-200/60 p-1.5 rounded-2xl self-start">
+                <Pressable onPress={() => { setActiveSystem('SK'); setSelected([]); }} className={`px-6 py-2 rounded-xl ${activeSystem === 'SK' ? 'bg-white' : ''}`}>
+                  <Text className={`text-[10px] font-black ${activeSystem === 'SK' ? 'text-blue-600' : 'text-slate-400'}`}>SK SYSTEM</Text>
+                </Pressable>
+                <Pressable onPress={() => { setActiveSystem('EG'); setSelected([]); }} className={`px-6 py-2 rounded-xl ${activeSystem === 'EG' ? 'bg-white' : ''}`}>
+                  <Text className={`text-[10px] font-black ${activeSystem === 'EG' ? 'text-purple-600' : 'text-slate-400'}`}>EG SYSTEM</Text>
+                </Pressable>
+              </View>
+            </View>
 
-              {/* STAGE PILLS */}
-              {(s.stages.sk_prep || s.stages.eg_prep || s.stages.bm_pickup || s.stages.received) && (
-                <View className="flex-row flex-wrap gap-1.5 mt-3">
-                  {s.stages.sk_prep && <StagePill label={`SK Prep ${s.stages.sk_prep}`} tone="blue" />}
-                  {s.stages.eg_prep && <StagePill label={`EG Prep ${s.stages.eg_prep}`} tone="purple" />}
-                  {s.stages.bm_pickup && <StagePill label={`Pickup ${s.stages.bm_pickup}`} tone="amber" />}
-                  {s.stages.received && <StagePill label={`Received ${s.stages.received}`} tone="emerald" />}
-                </View>
+            {/* SELECTION BAR */}
+            <View className="flex-row items-center justify-between px-1">
+              <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{students.length} Students</Text>
+              {selected.length > 0 && (
+                <Text className="text-[11px] font-black text-blue-600 uppercase tracking-widest">{selected.length} selected</Text>
               )}
+            </View>
 
-              {/* CODE + QR placeholder */}
-              <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-slate-50">
-                <View className="flex-1">
-                  {/* Decorative barcode stripes */}
-                  <View className="flex-row h-8 items-stretch gap-px">
-                    {Array.from({ length: 28 }).map((_, i) => (
-                      <View key={i} className="bg-slate-800" style={{ width: i % 3 === 0 ? 3 : 1 }} />
-                    ))}
-                  </View>
-                  <Text className="text-[9px] font-mono font-bold text-slate-500 uppercase mt-1">{code}</Text>
-                </View>
-                <View className="w-12 h-12 ml-3 border border-slate-200 rounded-lg items-center justify-center">
-                  <Text className="text-[7px] font-black text-slate-300">QR</Text>
-                </View>
-              </View>
-            </Pressable>
-          );
-        })}
-
-        <View className="bg-emerald-50 rounded-2xl p-3">
-          <Text className="text-[10px] font-bold text-emerald-700 text-center">
-            Print Labels is a desktop feature — barcode/QR generation comes later (react-native-qrcode-svg).
-          </Text>
-        </View>
-      </ScrollView>
+            {/* LOADING / ERROR / EMPTY */}
+            <ScreenState
+              loading={loading}
+              error={error}
+              empty={!loading && !error && students.length === 0}
+              onRetry={reload}
+              emptyText="No students found"
+            />
+          </View>
+        }
+        ListFooterComponent={
+          !loading && !error && students.length > 0 ? (
+            <View className="bg-emerald-50 rounded-2xl p-3">
+              <Text className="text-[10px] font-bold text-emerald-700 text-center">
+                Print Labels is a desktop feature — barcode/QR generation comes later (react-native-qrcode-svg).
+              </Text>
+            </View>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }

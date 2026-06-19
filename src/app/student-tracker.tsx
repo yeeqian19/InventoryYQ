@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Dropdown from '@/components/Dropdown';
@@ -101,94 +101,106 @@ export default function StudentTrackerScreen() {
     [scopedRows, statusFilter],
   );
 
+  const renderRow = ({ item: r }: { item: Row }) => (
+    <View className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-4">
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1 pr-2">
+          <Text className="text-sm font-black text-slate-900">{r.name}</Text>
+          <Text className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{r.doc_no} · {r.branch} · {r.package}</Text>
+        </View>
+        <View className={`px-2.5 py-1 rounded-full ${STATUS_BADGE[r.status]}`}>
+          <Text className={`text-[9px] font-black uppercase tracking-widest ${STATUS_BADGE[r.status].split(' ')[1]}`}>{STATUS_LABEL[r.status]}</Text>
+        </View>
+      </View>
+
+      {/* 3 STAGES */}
+      <View className="flex-row gap-2 mt-3">
+        <StageBox label="HQ Prep" done={r.hqDone} current={r.stage === 'HQ_PREP'} />
+        <StageBox label="BM Pickup" done={r.pickupDone} current={r.stage === 'BM_PICKUP'} />
+        <StageBox label="Handover" done={r.handoverDone} current={r.stage === 'BM_HANDOVER'} />
+      </View>
+
+      {/* DEADLINE + EXTEND */}
+      <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-slate-50">
+        <View>
+          <Text className="text-xs font-black text-slate-800">{r.deadline}</Text>
+          {r.stage !== 'COMPLETED' && (
+            <Text className={`text-[9px] font-bold uppercase tracking-widest ${r.status === 'OVERDUE' ? 'text-red-500' : r.status === 'DUE_SOON' ? 'text-amber-500' : 'text-slate-400'}`}>
+              {r.daysRemaining < 0 ? `${Math.abs(r.daysRemaining)}d late` : r.daysRemaining === 0 ? 'Due today' : `${r.daysRemaining}d left`}
+            </Text>
+          )}
+        </View>
+        {r.stage !== 'COMPLETED' && (
+          <Pressable onPress={() => { setExtendRow(r); setExtendDays('7'); setReason(''); }} className="bg-emerald-500 px-4 py-2 rounded-lg active:scale-95">
+            <Text className="text-white text-[10px] font-black uppercase tracking-widest">Extend</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
-      <ScrollView contentContainerClassName="p-4 gap-4 pb-10" showsVerticalScrollIndicator={false}>
-        <View className="flex-row items-start justify-between">
-          <View>
-            <Text className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Student Tracker</Text>
-            <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">10d HQ Prep → 8d Pickup → 6d Handover</Text>
-          </View>
-          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
-            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
-          </Pressable>
-        </View>
-
-        {/* SUMMARY CARDS (tap to filter) */}
-        <View className="flex-row flex-wrap -mx-1">
-          <Summary label="Total" value={counts.total} accent="bg-slate-400" active={statusFilter === 'ALL'} onPress={() => setStatusFilter('ALL')} />
-          <Summary label="On-Track" value={counts.on_track} accent="bg-emerald-500" active={statusFilter === 'ON_TRACK'} onPress={() => setStatusFilter(statusFilter === 'ON_TRACK' ? 'ALL' : 'ON_TRACK')} />
-          <Summary label="Due Soon" value={counts.due_soon} accent="bg-amber-500" active={statusFilter === 'DUE_SOON'} onPress={() => setStatusFilter(statusFilter === 'DUE_SOON' ? 'ALL' : 'DUE_SOON')} />
-          <Summary label="Overdue" value={counts.overdue} accent="bg-red-500" active={statusFilter === 'OVERDUE'} onPress={() => setStatusFilter(statusFilter === 'OVERDUE' ? 'ALL' : 'OVERDUE')} />
-          <Summary label="Done" value={counts.completed} accent="bg-blue-500" active={statusFilter === 'COMPLETED'} onPress={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')} />
-        </View>
-
-        {/* FILTERS */}
-        <View className="bg-white rounded-2xl border border-slate-200 p-3 gap-3">
-          <TextInput
-            placeholder="Search student name..."
-            placeholderTextColor="#94a3b8"
-            value={search}
-            onChangeText={setSearch}
-            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-bold text-slate-700"
-          />
-          <View className="flex-row gap-2">
-            <Dropdown value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
-            <Dropdown value={statusFilter} options={STATUS_OPTIONS} onChange={(v) => setStatusFilter(v as Status | 'ALL')} />
-          </View>
-          <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="lastWeek" onChange={setRange} />
-        </View>
-
-        <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{filtered.length} / {counts.total} students</Text>
-
-        {/* LOADING / ERROR / EMPTY */}
-        <ScreenState
-          loading={loading}
-          error={error}
-          empty={!loading && !error && rows.length === 0}
-          onRetry={reload}
-          emptyText="No students to track"
-        />
-
-        {/* STUDENT CARDS */}
-        {!loading && !error && filtered.map((r) => (
-          <View key={r.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <View className="flex-row justify-between items-start">
-              <View className="flex-1 pr-2">
-                <Text className="text-sm font-black text-slate-900">{r.name}</Text>
-                <Text className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{r.doc_no} · {r.branch} · {r.package}</Text>
-              </View>
-              <View className={`px-2.5 py-1 rounded-full ${STATUS_BADGE[r.status]}`}>
-                <Text className={`text-[9px] font-black uppercase tracking-widest ${STATUS_BADGE[r.status].split(' ')[1]}`}>{STATUS_LABEL[r.status]}</Text>
-              </View>
-            </View>
-
-            {/* 3 STAGES */}
-            <View className="flex-row gap-2 mt-3">
-              <StageBox label="HQ Prep" done={r.hqDone} current={r.stage === 'HQ_PREP'} />
-              <StageBox label="BM Pickup" done={r.pickupDone} current={r.stage === 'BM_PICKUP'} />
-              <StageBox label="Handover" done={r.handoverDone} current={r.stage === 'BM_HANDOVER'} />
-            </View>
-
-            {/* DEADLINE + EXTEND */}
-            <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-slate-50">
+      <FlatList
+        data={!loading && !error ? filtered : []}
+        keyExtractor={(r) => String(r.id)}
+        renderItem={renderRow}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerClassName="p-4 pb-10"
+        removeClippedSubviews
+        initialNumToRender={10}
+        windowSize={11}
+        ListHeaderComponent={
+          <View className="gap-4 mb-4">
+            <View className="flex-row items-start justify-between">
               <View>
-                <Text className="text-xs font-black text-slate-800">{r.deadline}</Text>
-                {r.stage !== 'COMPLETED' && (
-                  <Text className={`text-[9px] font-bold uppercase tracking-widest ${r.status === 'OVERDUE' ? 'text-red-500' : r.status === 'DUE_SOON' ? 'text-amber-500' : 'text-slate-400'}`}>
-                    {r.daysRemaining < 0 ? `${Math.abs(r.daysRemaining)}d late` : r.daysRemaining === 0 ? 'Due today' : `${r.daysRemaining}d left`}
-                  </Text>
-                )}
+                <Text className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Student Tracker</Text>
+                <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">10d HQ Prep → 8d Pickup → 6d Handover</Text>
               </View>
-              {r.stage !== 'COMPLETED' && (
-                <Pressable onPress={() => { setExtendRow(r); setExtendDays('7'); setReason(''); }} className="bg-emerald-500 px-4 py-2 rounded-lg active:scale-95">
-                  <Text className="text-white text-[10px] font-black uppercase tracking-widest">Extend</Text>
-                </Pressable>
-              )}
+              <Pressable onPress={() => (router.canGoBack() ? router.back() : router.push('/dashboard'))} className="bg-white px-4 py-2 rounded-xl border border-slate-200">
+                <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Back</Text>
+              </Pressable>
             </View>
+
+            {/* SUMMARY CARDS (tap to filter) */}
+            <View className="flex-row flex-wrap -mx-1">
+              <Summary label="Total" value={counts.total} accent="bg-slate-400" active={statusFilter === 'ALL'} onPress={() => setStatusFilter('ALL')} />
+              <Summary label="On-Track" value={counts.on_track} accent="bg-emerald-500" active={statusFilter === 'ON_TRACK'} onPress={() => setStatusFilter(statusFilter === 'ON_TRACK' ? 'ALL' : 'ON_TRACK')} />
+              <Summary label="Due Soon" value={counts.due_soon} accent="bg-amber-500" active={statusFilter === 'DUE_SOON'} onPress={() => setStatusFilter(statusFilter === 'DUE_SOON' ? 'ALL' : 'DUE_SOON')} />
+              <Summary label="Overdue" value={counts.overdue} accent="bg-red-500" active={statusFilter === 'OVERDUE'} onPress={() => setStatusFilter(statusFilter === 'OVERDUE' ? 'ALL' : 'OVERDUE')} />
+              <Summary label="Done" value={counts.completed} accent="bg-blue-500" active={statusFilter === 'COMPLETED'} onPress={() => setStatusFilter(statusFilter === 'COMPLETED' ? 'ALL' : 'COMPLETED')} />
+            </View>
+
+            {/* FILTERS */}
+            <View className="bg-white rounded-2xl border border-slate-200 p-3 gap-3">
+              <TextInput
+                placeholder="Search student name..."
+                placeholderTextColor="#94a3b8"
+                value={search}
+                onChangeText={setSearch}
+                className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-bold text-slate-700"
+              />
+              <View className="flex-row gap-2">
+                <Dropdown value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
+                <Dropdown value={statusFilter} options={STATUS_OPTIONS} onChange={(v) => setStatusFilter(v as Status | 'ALL')} />
+              </View>
+              <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="lastWeek" onChange={setRange} />
+            </View>
+
+            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{filtered.length} / {counts.total} students</Text>
+
+            {/* LOADING / ERROR / EMPTY */}
+            <ScreenState
+              loading={loading}
+              error={error}
+              empty={!loading && !error && rows.length === 0}
+              onRetry={reload}
+              emptyText="No students to track"
+            />
           </View>
-        ))}
-      </ScrollView>
+        }
+      />
 
       {/* EXTEND MODAL */}
       <Modal visible={!!extendRow} transparent animationType="fade" onRequestClose={() => setExtendRow(null)}>
