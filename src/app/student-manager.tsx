@@ -7,6 +7,10 @@ import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
 import { stdRange } from '@/lib/webDates';
+import { BRANCH_OPTIONS } from '@/constants/branches';
+
+// Branch filter options ('' = All Branches), same set as the web BranchMultiSelect.
+const BRANCH_FILTER_OPTIONS = [{ label: 'All Branches', value: '' }, ...BRANCH_OPTIONS];
 
 // Converted from app/student-manager/StudentManagerClient.tsx — mobile adaptation.
 // Table -> student cards. Barcode/QR are placeholders (real codes are for the web-only
@@ -63,6 +67,7 @@ export default function StudentManagerScreen() {
   // Defaults mirror the web Student Manager (New students, This Week) so the
   // mobile view matches the site and only fetches that window server-side.
   const [typeFilter, setTypeFilter] = useState('New');
+  const [branch, setBranch] = useState(''); // '' = All Branches (same as web default)
   const [range, setRange] = useState(() => stdRange('thisWeek'));
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -84,10 +89,11 @@ export default function StudentManagerScreen() {
       const code = activeSystem === 'SK' ? s.skBarcode : s.egBarcode;
       return !!code && code !== 'N/A' && code.trim() !== '';
     });
+    if (branch) list = list.filter((s) => s.branch === branch);
     if (search) list = list.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()));
     if (typeFilter !== 'All') list = list.filter((s) => s.type.toLowerCase() === typeFilter.toLowerCase());
     return list;
-  }, [data, search, typeFilter, activeSystem]);
+  }, [data, search, typeFilter, activeSystem, branch]);
 
   const toggle = (id: string) => setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
@@ -173,6 +179,9 @@ export default function StudentManagerScreen() {
               />
               <View className="flex-row">
                 <Dropdown value={typeFilter} options={TYPE_OPTIONS} onChange={setTypeFilter} />
+              </View>
+              <View className="flex-row">
+                <Dropdown value={branch} options={BRANCH_FILTER_OPTIONS} onChange={setBranch} />
               </View>
               <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
               {/* SK/EG system toggle */}
