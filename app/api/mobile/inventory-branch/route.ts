@@ -58,7 +58,15 @@ export async function GET(request: NextRequest) {
     const hasEG = !!egBarcode;
 
     const type = hasSK && hasEG ? 'SK + EG' : hasEG ? 'EG' : 'SK';
-    const state = item.student_received ? 'DONE' : item.bm_pickup ? 'READY' : 'EXPECTED';
+    // Match the web (expectedFromHQ): a row only counts as EXPECTED if a prepared item
+    // actually has a barcode. Rows prepped without a barcode fall into no bucket.
+    const state = item.student_received
+      ? 'DONE'
+      : item.bm_pickup
+        ? 'READY'
+        : (item.sk_prep && hasSK) || (item.eg_prep && hasEG)
+          ? 'EXPECTED'
+          : 'NONE';
 
     return {
       student_id: String(item.student_id),

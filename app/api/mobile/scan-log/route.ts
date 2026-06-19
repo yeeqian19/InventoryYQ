@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
   });
 
   const logs = rawLogs.map((log) => {
-    const ts = log.timestamp;
+    // Display in Malaysia time (UTC+8) regardless of server timezone, matching the
+    // web which renders the timestamp in the user's (Malaysia) browser-local time.
+    const ts = new Date(log.timestamp.getTime() + log.timestamp.getTimezoneOffset() * 60000 + 8 * 60 * 60000);
     return {
       id: log.id,
       date: `${ts.getFullYear()}-${pad(ts.getMonth() + 1)}-${pad(ts.getDate())}`,

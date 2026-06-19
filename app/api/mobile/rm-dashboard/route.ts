@@ -49,14 +49,11 @@ export async function GET() {
         ? item.student_name.trim()
         : 'NAME MISSING';
 
-    // Collapse the workflow booleans into the single stage the mobile UI renders.
-    const stage = item.student_received
-      ? 'received'
-      : item.bm_pickup
-        ? 'bm_pickup'
-        : item.sk_prep
-          ? 'prepared'
-          : 'not_prepared';
+    // SK/EG eligibility — SAME inline rules as the web RM page (NOT the shared utils):
+    // SK only for NEW; EG only for NEW + 12-month packages.
+    const hasSK = type === 'NEW';
+    const is12M = /\b12\b/.test(pkg) || pkg.includes('12M');
+    const hasEG = type === 'NEW' && is12M;
 
     return {
       id: item.student_id.toString(),
@@ -64,7 +61,14 @@ export async function GET() {
       branch: resolveBranchCode(item.branch_code, item.doc_no),
       pkg,
       type,
-      stage,
+      // Raw workflow flags so the mobile screen can replicate the web's exact
+      // prepared/pickup/received + SK/EG-toggle counting.
+      sk_prep: !!item.sk_prep,
+      eg_prep: !!item.eg_prep,
+      bm_pickup: !!item.bm_pickup,
+      student_received: !!item.student_received,
+      hasSK,
+      hasEG,
       // Web RM dashboard filters by created_at (= doc_date) — expose it for parity.
       created_at: item.doc_date ? item.doc_date.toISOString() : null,
     };
