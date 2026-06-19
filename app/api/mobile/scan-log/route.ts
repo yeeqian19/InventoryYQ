@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getMobileSession } from '@/lib/mobileAuth';
-import { rangeForPreset, type DatePreset } from '@/lib/trackerUtils';
+import { utcDayRange } from '@/lib/mobileDateFilter';
 
 export const dynamic = 'force-dynamic';
 
 // Read endpoint for the mobile Scan History Log.
-// Mirrors app/scan-log/page.tsx (scan_log rows, newest first), windowed by a date
-// preset (default thisWeek, matching the web) and split into {date, time}.
+// Mirrors app/scan-log/page.tsx (scan_log rows, newest first), windowed by the
+// client-supplied date range (same as the web) and split into {date, time}.
 const pad = (n: number) => String(n).padStart(2, '0');
-
-function timestampWhere(preset: string): { timestamp?: { gte: Date; lte: Date } } {
-  const { start, end } = rangeForPreset((preset || 'all') as DatePreset);
-  if (!start || !end) return {};
-  return { timestamp: { gte: new Date(`${start}T00:00:00`), lte: new Date(`${end}T23:59:59.999`) } };
-}
 
 export async function GET(request: NextRequest) {
   const session = await getMobileSession();
@@ -22,9 +16,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const preset = request.nextUrl.searchParams.get('preset') ?? 'thisWeek';
+  const sp = request.nextUrl.searchParams;
+  const range = utcDayRange(sp.get('start'), sp.get('end'));
   const rawLogs = await db.scanLog.findMany({
-    where: { ...timestampWhere(preset) },
+    where: { ...(range ? { timestamp: range } : {}) },
     orderBy: { timestamp: 'desc' },
   });
 

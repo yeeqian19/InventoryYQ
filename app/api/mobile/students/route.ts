@@ -3,19 +3,9 @@ import { db } from '@/lib/db';
 import { getMobileSession } from '@/lib/mobileAuth';
 import { resolveBranchCode } from '@/lib/branchUtils';
 import { resolveStudentType, hasEnrollmentGift } from '@/lib/studentUtils';
-import { rangeForPreset, type DatePreset } from '@/lib/trackerUtils';
+import { utcDayRange } from '@/lib/mobileDateFilter';
 
 export const dynamic = 'force-dynamic';
-
-// Build a Prisma doc_date filter from a date preset (same ranges the web uses).
-// Returns {} for 'all' so the caller can spread it into the where clause.
-function docDateWhere(preset: string): { doc_date?: { gte: Date; lte: Date } } {
-  const { start, end } = rangeForPreset((preset || 'all') as DatePreset);
-  if (!start || !end) return {};
-  const gte = new Date(`${start}T00:00:00`);
-  const lte = new Date(`${end}T23:59:59.999`);
-  return { doc_date: { gte, lte } };
-}
 
 // Read endpoint for the mobile Student Manager screen.
 // Mirrors app/student-manager/page.tsx's tableData, plus pre-formats the stage
@@ -33,12 +23,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Default to 'thisWeek' to mirror the web Student Manager's default view
-  // (and to avoid shipping the entire table to the phone).
-  const preset = request.nextUrl.searchParams.get('preset') ?? 'thisWeek';
+  // Date window comes from the client (computed with the same math as the web).
+  const sp = request.nextUrl.searchParams;
+  const range = utcDayRange(sp.get('start'), sp.get('end'));
 
   const rawStudents = await db.inventory_distribution_new.findMany({
-    where: { is_active: true, ...docDateWhere(preset) },
+    where: { is_active: true, ...(range ? { doc_date: range } : {}) },
     select: {
       student_id: true,
       student_name: true,

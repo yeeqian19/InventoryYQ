@@ -65,6 +65,8 @@ export async function GET() {
       pkg,
       type,
       stage,
+      // Web RM dashboard filters by created_at (= doc_date) — expose it for parity.
+      created_at: item.doc_date ? item.doc_date.toISOString() : null,
     };
   });
 

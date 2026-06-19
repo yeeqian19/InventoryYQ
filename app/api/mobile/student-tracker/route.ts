@@ -2,15 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getMobileSession } from '@/lib/mobileAuth';
 import { resolveStudentType } from '@/lib/studentUtils';
-import { computeTracker, rangeForPreset, type DatePreset } from '@/lib/trackerUtils';
+import { computeTracker } from '@/lib/trackerUtils';
+import { utcDayRange } from '@/lib/mobileDateFilter';
 
 export const dynamic = 'force-dynamic';
-
-function docDateWhere(preset: string): { doc_date?: { gte: Date; lte: Date } } {
-  const { start, end } = rangeForPreset((preset || 'all') as DatePreset);
-  if (!start || !end) return {};
-  return { doc_date: { gte: new Date(`${start}T00:00:00`), lte: new Date(`${end}T23:59:59.999`) } };
-}
 
 // Read endpoint for the mobile Student Tracker screen.
 // Mirrors app/student-tracker/page.tsx (NEW students only) and pre-computes the
@@ -32,9 +27,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const preset = request.nextUrl.searchParams.get('preset') ?? 'thisWeek';
+  const sp = request.nextUrl.searchParams;
+  const range = utcDayRange(sp.get('start'), sp.get('end'));
   const raw = await db.inventory_distribution_new.findMany({
-    where: { is_active: true, ...docDateWhere(preset) },
+    where: { is_active: true, ...(range ? { doc_date: range } : {}) },
     select: {
       student_id: true,
       student_name: true,
