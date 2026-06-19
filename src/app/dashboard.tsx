@@ -6,8 +6,17 @@ import Dropdown from '@/components/Dropdown';
 import Donut from '@/components/Donut';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
+import { useAuth } from '@/contexts/AuthContext';
 import { stdRange } from '@/lib/webDates';
 import { BRANCHES_SORTED } from '@/constants/branches';
+
+// In-dashboard navigation, same set + roles as the web HQ Dashboard nav.
+const HQ_LINKS: { name: string; icon: string; href: string; roles: string[] }[] = [
+  { name: 'Student Manager', icon: '🎓', href: '/student-manager', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Student Tracker', icon: '⏱️', href: '/student-tracker', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Scan & Approve', icon: '📷', href: '/scan-approve', roles: ['SUPERADMIN', 'ADMIN_HQ'] },
+  { name: 'Scan Log', icon: '📋', href: '/scan-log', roles: ['SUPERADMIN', 'ADMIN_HQ', 'USER_RM'] },
+];
 
 // Only count rows whose branch is in the master list — same as the web dashboard
 // (DashboardClient filters to valid BRANCH_MASTER_LIST codes before summing).
@@ -46,6 +55,8 @@ type MobileTab = 'overview' | 'charts' | 'branches';
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const hqLinks = HQ_LINKS.filter((l) => l.roles.includes(user?.role ?? ''));
   const [mobileTab, setMobileTab] = useState<MobileTab>('overview');
   const [selectedType, setSelectedType] = useState('NEW');
   const [quickDate, setQuickDate] = useState('lastWeek'); // matches the web Dashboard default
@@ -115,6 +126,26 @@ export default function DashboardScreen() {
 
       {/* SCROLLABLE CONTENT */}
       <ScrollView contentContainerClassName="p-4 gap-4" showsVerticalScrollIndicator={false}>
+        {/* HQ QUICK LINKS — same destinations as the web HQ Dashboard nav */}
+        {hqLinks.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2 px-0.5"
+          >
+            {hqLinks.map((l) => (
+              <Pressable
+                key={l.href}
+                onPress={() => router.push(l.href as never)}
+                className="flex-row items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2.5 active:opacity-80"
+              >
+                <Text className="text-base">{l.icon}</Text>
+                <Text className="text-[11px] font-black text-slate-700 uppercase tracking-wide">{l.name}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+
         {/* STAT CARDS */}
         <View className="flex-row gap-2">
           <StatCard label="Target" value={totalItems} bar="bg-slate-400" labelColor="text-slate-400" />
