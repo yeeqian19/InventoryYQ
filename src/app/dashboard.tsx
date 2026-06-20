@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AccessGate from '@/components/AccessGate';
 import Dropdown from '@/components/Dropdown';
 import Donut from '@/components/Donut';
 import ScreenState from '@/components/ScreenState';
@@ -55,6 +56,14 @@ const DATE_OPTIONS = [
 type MobileTab = 'overview' | 'charts' | 'branches';
 
 export default function DashboardScreen() {
+  return (
+    <AccessGate page="/dashboard">
+      <DashboardScreenInner />
+    </AccessGate>
+  );
+}
+
+function DashboardScreenInner() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Dimensions, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 export type Option = { label: string; value: string };
 
@@ -15,6 +15,9 @@ export default function Dropdown({
 }) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
+  // Cap the list height so long lists (e.g. ~28 branches) scroll instead of
+  // overflowing the screen and clipping options you can't reach.
+  const maxHeight = Math.round(Dimensions.get('window').height * 0.6);
 
   return (
     <View className="flex-1">
@@ -30,25 +33,33 @@ export default function Dropdown({
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable className="flex-1 bg-black/40 justify-center px-10" onPress={() => setOpen(false)}>
-          <View className="bg-white rounded-2xl overflow-hidden">
-            {options.map((opt) => {
-              const selected = opt.value === value;
-              return (
-                <Pressable
-                  key={opt.value}
-                  onPress={() => {
-                    onChange(opt.value);
-                    setOpen(false);
-                  }}
-                  className={`px-5 py-4 border-b border-slate-50 ${selected ? 'bg-emerald-50' : 'active:bg-slate-50'}`}
-                >
-                  <Text className={`text-sm font-black uppercase ${selected ? 'text-emerald-600' : 'text-slate-700'}`}>
-                    {opt.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          {/* Stop taps inside the sheet from closing it; cap height so long lists scroll. */}
+          <Pressable className="bg-white rounded-2xl overflow-hidden" style={{ maxHeight }} onPress={() => {}}>
+            <ScrollView
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              bounces={false}
+            >
+              {options.map((opt) => {
+                const selected = opt.value === value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => {
+                      onChange(opt.value);
+                      setOpen(false);
+                    }}
+                    className={`px-5 py-4 border-b border-slate-50 ${selected ? 'bg-emerald-50' : 'active:bg-slate-50'}`}
+                  >
+                    <Text className={`text-sm font-black uppercase ${selected ? 'text-emerald-600' : 'text-slate-700'}`}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>

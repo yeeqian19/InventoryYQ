@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AccessGate from '@/components/AccessGate';
 import Dropdown from '@/components/Dropdown';
 import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
+import { usePagedList, PAGE_SIZE_OPTIONS } from '@/lib/usePagedList';
 import { stdRange } from '@/lib/webDates';
 import { BRANCH_OPTIONS } from '@/constants/branches';
 
@@ -61,6 +63,14 @@ const PILL_TONE: Record<string, string> = {
 };
 
 export default function StudentManagerScreen() {
+  return (
+    <AccessGate page="/student-manager">
+      <StudentManagerScreenInner />
+    </AccessGate>
+  );
+}
+
+function StudentManagerScreenInner() {
   const router = useRouter();
   const [activeSystem, setActiveSystem] = useState<'SK' | 'EG'>('SK');
   const [search, setSearch] = useState('');
@@ -94,6 +104,12 @@ export default function StudentManagerScreen() {
     if (typeFilter !== 'All') list = list.filter((s) => s.type.toLowerCase() === typeFilter.toLowerCase());
     return list;
   }, [data, search, typeFilter, activeSystem, branch]);
+
+  // Display pagination (default 50 + dropdown + load-more), reset when filters change.
+  const { shown, pageSize, setPageSize, loadMore, hasMore, total } = usePagedList(
+    students,
+    `${search}|${typeFilter}|${branch}|${range.start}|${range.end}|${activeSystem}`,
+  );
 
   const toggle = (id: string) => setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
@@ -150,9 +166,11 @@ export default function StudentManagerScreen() {
   return (
     <SafeAreaView className="flex-1 bg-surface-appBg" edges={['top']}>
       <FlatList
-        data={!loading && !error ? students : []}
+        data={!loading && !error ? shown : []}
         keyExtractor={(s) => s.id}
         renderItem={renderStudent}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.6}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="p-4 pb-10"
@@ -184,6 +202,9 @@ export default function StudentManagerScreen() {
                 <Dropdown value={branch} options={BRANCH_FILTER_OPTIONS} onChange={setBranch} />
               </View>
               <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
+              <View className="flex-row">
+                <Dropdown value={pageSize} options={PAGE_SIZE_OPTIONS} onChange={setPageSize} />
+              </View>
               {/* SK/EG system toggle */}
               <View className="flex-row bg-slate-200/60 p-1.5 rounded-2xl self-start">
                 <Pressable onPress={() => { setActiveSystem('SK'); setSelected([]); }} className={`px-6 py-2 rounded-xl ${activeSystem === 'SK' ? 'bg-white' : ''}`}>
@@ -197,7 +218,7 @@ export default function StudentManagerScreen() {
 
             {/* SELECTION BAR */}
             <View className="flex-row items-center justify-between px-1">
-              <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{students.length} Students</Text>
+              <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{shown.length} of {total} Students</Text>
               {selected.length > 0 && (
                 <Text className="text-[11px] font-black text-blue-600 uppercase tracking-widest">{selected.length} selected</Text>
               )}
@@ -215,10 +236,19 @@ export default function StudentManagerScreen() {
         }
         ListFooterComponent={
           !loading && !error && students.length > 0 ? (
-            <View className="bg-emerald-50 rounded-2xl p-3">
-              <Text className="text-[10px] font-bold text-emerald-700 text-center">
-                Print Labels is a desktop feature — barcode/QR generation comes later (react-native-qrcode-svg).
-              </Text>
+            <View className="gap-3">
+              {hasMore && (
+                <Pressable onPress={loadMore} className="bg-slate-900 rounded-2xl py-3 active:opacity-90">
+                  <Text className="text-[11px] font-black text-white text-center uppercase tracking-widest">
+                    Load more ({shown.length} of {total})
+                  </Text>
+                </Pressable>
+              )}
+              <View className="bg-emerald-50 rounded-2xl p-3">
+                <Text className="text-[10px] font-bold text-emerald-700 text-center">
+                  Print Labels is a desktop feature — barcode/QR generation comes later (react-native-qrcode-svg).
+                </Text>
+              </View>
             </View>
           ) : null
         }

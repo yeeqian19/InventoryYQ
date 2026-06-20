@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AccessGate from '@/components/AccessGate';
 import Dropdown from '@/components/Dropdown';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
@@ -29,6 +30,14 @@ const ROLE_OPTIONS = [
 const emptyForm = { name: '', email: '', password: '', role: 'USER_BM', branch: '' };
 
 export default function StaffManagementScreen() {
+  return (
+    <AccessGate page="/staff-management">
+      <StaffManagementScreenInner />
+    </AccessGate>
+  );
+}
+
+function StaffManagementScreenInner() {
   const router = useRouter();
   // Live data from the backend (same query as the web staff page).
   const { data, loading, error: loadError, reload } = useApi<{ staff: Staff[] }>('/api/mobile/staff');

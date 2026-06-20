@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AccessGate from '@/components/AccessGate';
 import Dropdown from '@/components/Dropdown';
 import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
+import { usePagedList, PAGE_SIZE_OPTIONS } from '@/lib/usePagedList';
 import { stdRange } from '@/lib/webDates';
 
 // Converted from components/StudentTrackerTable.tsx — mobile adaptation.
@@ -68,6 +70,14 @@ const DATE_OPTIONS = [
 ];
 
 export default function StudentTrackerScreen() {
+  return (
+    <AccessGate page="/student-tracker">
+      <StudentTrackerScreenInner />
+    </AccessGate>
+  );
+}
+
+function StudentTrackerScreenInner() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<Status | 'ALL'>('ALL');
@@ -99,6 +109,12 @@ export default function StudentTrackerScreen() {
   const filtered = useMemo(
     () => scopedRows.filter((r) => statusFilter === 'ALL' || r.status === statusFilter),
     [scopedRows, statusFilter],
+  );
+
+  // Display pagination (default 50 + dropdown + load-more), reset when filters change.
+  const { shown, pageSize, setPageSize, loadMore, hasMore, total } = usePagedList(
+    filtered,
+    `${search}|${typeFilter}|${statusFilter}|${range.start}|${range.end}`,
   );
 
   const renderRow = ({ item: r }: { item: Row }) => (
@@ -142,9 +158,11 @@ export default function StudentTrackerScreen() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <FlatList
-        data={!loading && !error ? filtered : []}
+        data={!loading && !error ? shown : []}
         keyExtractor={(r) => String(r.id)}
         renderItem={renderRow}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.6}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="p-4 pb-10"
@@ -186,9 +204,12 @@ export default function StudentTrackerScreen() {
                 <Dropdown value={statusFilter} options={STATUS_OPTIONS} onChange={(v) => setStatusFilter(v as Status | 'ALL')} />
               </View>
               <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="lastWeek" onChange={setRange} />
+              <View className="flex-row">
+                <Dropdown value={pageSize} options={PAGE_SIZE_OPTIONS} onChange={setPageSize} />
+              </View>
             </View>
 
-            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{filtered.length} / {counts.total} students</Text>
+            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{shown.length} of {total} (filtered from {counts.total})</Text>
 
             {/* LOADING / ERROR / EMPTY */}
             <ScreenState
@@ -199,6 +220,15 @@ export default function StudentTrackerScreen() {
               emptyText="No students to track"
             />
           </View>
+        }
+        ListFooterComponent={
+          hasMore ? (
+            <Pressable onPress={loadMore} className="bg-slate-900 rounded-2xl py-3 active:opacity-90">
+              <Text className="text-[11px] font-black text-white text-center uppercase tracking-widest">
+                Load more ({shown.length} of {total})
+              </Text>
+            </Pressable>
+          ) : null
         }
       />
 

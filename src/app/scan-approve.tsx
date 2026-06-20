@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import AccessGate from '@/components/AccessGate';
 import QrScanner from '@/components/QrScanner';
 
 // Converted from app/scan-approve/ScanApproveClient.tsx — mobile.
@@ -10,6 +12,15 @@ import QrScanner from '@/components/QrScanner';
 type ScanRecord = { barcode: string; status: 'success' | 'error'; studentName: string; details: string; time: string };
 
 export default function ScanApproveScreen() {
+  return (
+    <AccessGate page="/scan-approve">
+      <ScanApproveScreenInner />
+    </AccessGate>
+  );
+}
+
+function ScanApproveScreenInner() {
+  const router = useRouter();
   const [cameraOpen, setCameraOpen] = useState(false);
   const [feed, setFeed] = useState<ScanRecord[]>([]);
 
@@ -25,6 +36,10 @@ export default function ScanApproveScreen() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <ScrollView contentContainerClassName="p-4 gap-4 pb-10" showsVerticalScrollIndicator={false}>
+        <Pressable onPress={() => router.push('/home')} className="self-start bg-white px-4 py-2 rounded-xl border border-slate-200">
+          <Text className="text-[10px] font-black uppercase tracking-widest text-slate-600">← Home</Text>
+        </Pressable>
+
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Scanning Terminal</Text>

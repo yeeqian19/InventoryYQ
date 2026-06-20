@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AccessGate from '@/components/AccessGate';
+import Dropdown from '@/components/Dropdown';
 import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
+import { usePagedList, PAGE_SIZE_OPTIONS } from '@/lib/usePagedList';
 import { stdRange } from '@/lib/webDates';
 
 // Converted from app/scan-log/ScanLogClient.tsx — mobile. Audit-log table -> log cards.
@@ -44,6 +47,14 @@ function actionClasses(action: string): string {
 }
 
 export default function ScanLogScreen() {
+  return (
+    <AccessGate page="/scan-log">
+      <ScanLogScreenInner />
+    </AccessGate>
+  );
+}
+
+function ScanLogScreenInner() {
   const router = useRouter();
   const [range, setRange] = useState(() => stdRange('thisWeek')); // matches the web default
   const [search, setSearch] = useState('');
@@ -54,6 +65,12 @@ export default function ScanLogScreen() {
   const logs = useMemo(
     () => (data?.logs ?? []).filter((l) => !search || l.student.toLowerCase().includes(search.toLowerCase()) || l.branch.toLowerCase().includes(search.toLowerCase())),
     [data, search],
+  );
+
+  // Display pagination (default 50 + dropdown + load-more), reset when filters change.
+  const { shown, pageSize, setPageSize, loadMore, hasMore, total } = usePagedList(
+    logs,
+    `${search}|${range.start}|${range.end}`,
   );
 
   const renderLog = ({ item: l }: { item: Log }) => (
@@ -83,9 +100,11 @@ export default function ScanLogScreen() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <FlatList
-        data={!loading && !error ? logs : []}
+        data={!loading && !error ? shown : []}
         keyExtractor={(l) => String(l.id)}
         renderItem={renderLog}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.6}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="p-4 pb-10"
@@ -114,13 +133,25 @@ export default function ScanLogScreen() {
                 className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-bold text-slate-700"
               />
               <DateFilter presets={DATE_OPTIONS} rangeFor={stdRange} initial="thisWeek" onChange={setRange} />
+              <View className="flex-row">
+                <Dropdown value={pageSize} options={PAGE_SIZE_OPTIONS} onChange={setPageSize} />
+              </View>
             </View>
 
-            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{logs.length} logs</Text>
+            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{shown.length} of {total} logs</Text>
 
             {/* LOADING / ERROR */}
             <ScreenState loading={loading} error={error} onRetry={reload} />
           </View>
+        }
+        ListFooterComponent={
+          hasMore ? (
+            <Pressable onPress={loadMore} className="bg-slate-900 rounded-2xl py-3 active:opacity-90">
+              <Text className="text-[11px] font-black text-white text-center uppercase tracking-widest">
+                Load more ({shown.length} of {total})
+              </Text>
+            </Pressable>
+          ) : null
         }
         ListEmptyComponent={
           !loading && !error ? (

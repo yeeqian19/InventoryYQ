@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AccessGate from '@/components/AccessGate';
 import Dropdown from '@/components/Dropdown';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
@@ -56,6 +57,14 @@ const STAGE_LABEL: Record<Stage, string> = {
 };
 
 export default function RMDashboardScreen() {
+  return (
+    <AccessGate page="/RM_Dashboard">
+      <RMDashboardScreenInner />
+    </AccessGate>
+  );
+}
+
+function RMDashboardScreenInner() {
   const router = useRouter();
   const [itemToggle, setItemToggle] = useState('ALL'); // ALL | SK | EG
   const [activeType, setActiveType] = useState('NEW'); // matches the web default

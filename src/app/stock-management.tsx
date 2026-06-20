@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AccessGate from '@/components/AccessGate';
 import ScreenState from '@/components/ScreenState';
 import { useApi } from '@/lib/useApi';
 
@@ -30,6 +31,14 @@ const SECTIONS: { category: Category; label: string; subtitle: string }[] = [
 ];
 
 export default function StockManagementScreen() {
+  return (
+    <AccessGate page="/stock-management">
+      <StockManagementScreenInner />
+    </AccessGate>
+  );
+}
+
+function StockManagementScreenInner() {
   const router = useRouter();
   const { data, loading, error, reload } = useApi<{
     items: StockItem[];
