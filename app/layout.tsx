@@ -17,6 +17,8 @@ export default function RootLayout({
   const isSpecialPage =
     lowerPath === '/' ||
     lowerPath === '/login' ||
+    lowerPath.includes('operations') ||
+    lowerPath.includes('marketing') ||
     lowerPath.includes('rm_dashboard') ||
     lowerPath.includes('inventory-branch') ||
     lowerPath.includes('bm-pickup') ||
