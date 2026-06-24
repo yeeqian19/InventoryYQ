@@ -66,39 +66,59 @@ export async function fetchMarketingEvents(): Promise<FaEventRow[]> {
   }));
 }
 
-export interface RegisteredCounts {
+export interface BucketedCount {
   total: number;
   byGrade: Record<number, number>;   // keyed by target_grade INT (1-16)
   byBranch: Record<string, number>;  // keyed by branch code (e.g. "ST", "AMP")
 }
 
+export interface RegisteredCounts {
+  registered: BucketedCount;  // confirmed + attended (committed to attend)
+  absent: BucketedCount;      // no_show — confirmed but didn't attend
+  walk_in: BucketedCount;     // walk_in — showed up without confirming (FA team will add this status later)
+}
+
+function emptyBucket(): BucketedCount {
+  return { total: 0, byGrade: {}, byBranch: {} };
+}
+
 /**
- * Fetch the count of CONFIRMED invitations for an event, bucketed by
- * (branch, target_grade). Used to populate the live "Registered" column
- * in the Marketing Inventory table.
+ * Fetch invitation counts for an event, bucketed by (branch, target_grade)
+ * and split across the three statuses that map onto our table columns:
+ *   - "Registered" ← confirmed + attended
+ *   - "Absent"     ← no_show
+ *   - "Walk-in"    ← walk_in (status doesn't exist yet; will auto-populate when added)
+ * Single query for efficiency.
  */
 export async function fetchRegisteredCounts(eventId: string): Promise<RegisteredCounts> {
   const pool = getLeadsPool();
-  // Students with status 'attended' confirmed first (it's a normal progression
-  // confirmed → attended), so we count both as "registered" for inventory planning.
-  const result = await pool.query<{ branch: string | null; target_grade: number | null; cnt: string }>(
-    `SELECT branch, target_grade, COUNT(*) AS cnt
+  const result = await pool.query<{ branch: string | null; target_grade: number | null; status: string; cnt: string }>(
+    `SELECT branch, target_grade, status, COUNT(*) AS cnt
        FROM public.fa_invitations
-      WHERE event_id = $1 AND status IN ('confirmed', 'attended')
-   GROUP BY branch, target_grade`,
+      WHERE event_id = $1
+        AND status IN ('confirmed', 'attended', 'no_show', 'walk_in')
+   GROUP BY branch, target_grade, status`,
     [eventId]
   );
 
-  let total = 0;
-  const byGrade: Record<number, number> = {};
-  const byBranch: Record<string, number> = {};
+  const out: RegisteredCounts = {
+    registered: emptyBucket(),
+    absent:     emptyBucket(),
+    walk_in:    emptyBucket(),
+  };
 
   for (const r of result.rows) {
     const cnt = parseInt(r.cnt, 10) || 0;
-    total += cnt;
-    if (r.branch) byBranch[r.branch] = (byBranch[r.branch] ?? 0) + cnt;
-    if (r.target_grade !== null) byGrade[r.target_grade] = (byGrade[r.target_grade] ?? 0) + cnt;
+    let target: BucketedCount;
+    if (r.status === 'confirmed' || r.status === 'attended') target = out.registered;
+    else if (r.status === 'no_show') target = out.absent;
+    else if (r.status === 'walk_in') target = out.walk_in;
+    else continue;
+
+    target.total += cnt;
+    if (r.branch) target.byBranch[r.branch] = (target.byBranch[r.branch] ?? 0) + cnt;
+    if (r.target_grade !== null) target.byGrade[r.target_grade] = (target.byGrade[r.target_grade] ?? 0) + cnt;
   }
 
-  return { total, byGrade, byBranch };
+  return out;
 }

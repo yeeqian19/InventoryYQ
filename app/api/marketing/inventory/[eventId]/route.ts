@@ -55,7 +55,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ eve
             it.grades.map(g => GRADE_TO_TARGET_INT[g]).filter((v): v is number => v !== undefined)
           );
           const newLabels: string[] = [];
-          for (const k of Object.keys(counts.byGrade)) {
+          // Union the three status buckets' grades so we auto-extend for any
+          // target_grade that appears in confirmed/attended/no_show/walk_in.
+          const allTargetInts = new Set<string>([
+            ...Object.keys(counts.registered.byGrade),
+            ...Object.keys(counts.absent.byGrade),
+            ...Object.keys(counts.walk_in.byGrade),
+          ]);
+          for (const k of allTargetInts) {
             const t = parseInt(k, 10);
             if (knownTargetInts.has(t)) continue;
             const label = TARGET_INT_TO_GRADE[t];
@@ -72,7 +79,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ eve
         // Auto-add branches found in fa_invitations.branch but not in item.branches.
         if (it.branches.length > 0) {
           const newBranches: string[] = [];
-          for (const b of Object.keys(counts.byBranch)) {
+          // Union branches across all three status buckets, same reason as grades.
+          const allBranches = new Set<string>([
+            ...Object.keys(counts.registered.byBranch),
+            ...Object.keys(counts.absent.byBranch),
+            ...Object.keys(counts.walk_in.byBranch),
+          ]);
+          for (const b of allBranches) {
             if (it.branches.includes(b)) continue;
             newBranches.push(b);
           }
@@ -126,23 +139,31 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ eve
       orderBy: [{ item_id: 'asc' }, { grade: 'asc' }, { branch: 'asc' }],
     });
 
-    // ── OVERRIDE registered WITH LIVE COUNTS ──
-    // Bucketing rules:
-    //   - row has grade  → count where target_grade matches (1-8 / A1-A4 / B1-B4)
-    //   - row has branch → count where branch matches
-    //   - otherwise      → total confirmed for the event
+    // ── OVERRIDE registered, no_show, walk_in WITH LIVE COUNTS ──
+    // Each comes from fa_invitations grouped by branch/target_grade:
+    //   - registered ← confirmed + attended
+    //   - no_show    ← no_show (shown as "Absent")
+    //   - walk_in    ← walk_in (status not added yet; will populate when FA team adds it)
+    // Bucketing rules per row:
+    //   - row has grade  → look up by target_grade
+    //   - row has branch → look up by branch
+    //   - otherwise      → use the bucket's overall total
     let enrichedRows = rows;
     if (counts) {
-      enrichedRows = rows.map(r => {
-        let registered = counts!.total;
-        if (r.grade !== null) {
-          const targetInt = GRADE_TO_TARGET_INT[r.grade] ?? -1;
-          registered = counts!.byGrade[targetInt] ?? 0;
-        } else if (r.branch !== null) {
-          registered = counts!.byBranch[r.branch] ?? 0;
+      const pick = (bucket: typeof counts.registered, grade: string | null, branch: string | null) => {
+        if (grade !== null) {
+          const t = GRADE_TO_TARGET_INT[grade] ?? -1;
+          return bucket.byGrade[t] ?? 0;
         }
-        return { ...r, registered };
-      });
+        if (branch !== null) return bucket.byBranch[branch] ?? 0;
+        return bucket.total;
+      };
+      enrichedRows = rows.map(r => ({
+        ...r,
+        registered: pick(counts!.registered, r.grade, r.branch),
+        no_show:    pick(counts!.absent,     r.grade, r.branch),
+        walk_in:    pick(counts!.walk_in,    r.grade, r.branch),
+      }));
     }
 
     return NextResponse.json({ rows: enrichedRows, items });

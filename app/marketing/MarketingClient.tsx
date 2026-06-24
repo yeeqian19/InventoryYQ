@@ -167,16 +167,20 @@ function eventEndDateFromName(name: string, fallbackYear: number): string {
 // stock and they use editable overrides:
 //   - total_to_bring_set  → user-entered "how many to bring" (default = in_stock)
 //   - closing_stock_set   → user-entered count after event (default = in_stock + ordered)
+// For returnable items, `returned` mirrors `closing_stock` since "items returned
+// from students" equals "items now in our store" for fully-returnable inventory.
 function calcDerived(row: InventoryRow, returnable: boolean = false) {
   const total_to_bring = returnable
     ? (row.total_to_bring_set ?? row.in_stock)
     : (row.registered + row.buffer);
   const shortfall = total_to_bring - row.in_stock;
   const actual_attended = row.registered - row.no_show + row.walk_in;
-  const returned = returnable ? total_to_bring : (total_to_bring - actual_attended);
   const closing_stock = returnable
     ? (row.closing_stock_set ?? (row.in_stock + row.ordered))
     : row.in_stock + row.ordered - actual_attended;
+  // For consumables: returned = unused leftover from what we packed (total_to_bring − actual_attended)
+  // For returnables:  returned = closing_stock (locked-mirror of what's now back in store)
+  const returned = returnable ? closing_stock : (total_to_bring - actual_attended);
   return { total_to_bring, shortfall, actual_attended, returned, closing_stock };
 }
 
@@ -1724,17 +1728,17 @@ export default function MarketingClient({ userName }: { userName: string; userRo
               </p>
             </div>
             <FormGrid>
-              <Field label="No-show">
-                <input type="number" value={editRowForm.no_show}
-                  disabled={postLocked}
-                  onChange={e => setEditRowForm(p => ({ ...p, no_show: parseInt(e.target.value) || 0 }))}
-                  className={`${inputCls} ${postLocked ? 'opacity-40 cursor-not-allowed' : ''}`} />
+              <Field label="Absent (live from fa_invitations)">
+                <div className={`${inputCls} bg-slate-100 text-slate-700 cursor-not-allowed inline-flex items-center justify-between`}>
+                  <span>{editRowForm.no_show}</span>
+                  <span className="text-[10px] text-slate-400">🔒 Auto</span>
+                </div>
               </Field>
-              <Field label="Walk-in">
-                <input type="number" value={editRowForm.walk_in}
-                  disabled={postLocked}
-                  onChange={e => setEditRowForm(p => ({ ...p, walk_in: parseInt(e.target.value) || 0 }))}
-                  className={`${inputCls} ${postLocked ? 'opacity-40 cursor-not-allowed' : ''}`} />
+              <Field label="Walk-in (live from fa_invitations)">
+                <div className={`${inputCls} bg-slate-100 text-slate-700 cursor-not-allowed inline-flex items-center justify-between`}>
+                  <span>{editRowForm.walk_in}</span>
+                  <span className="text-[10px] text-slate-400">🔒 Auto</span>
+                </div>
               </Field>
               <Field label="Actual Attended (auto)">
                 <div className={`${inputCls} bg-blue-50 text-blue-700 cursor-not-allowed ${postLocked ? 'opacity-40' : ''}`}>
@@ -1886,7 +1890,7 @@ function InventoryTable({ rows, event, updateCell, renameItem, getLatestWalkIn, 
               <th className="py-4 px-2 text-[11px] font-black text-rose-900 uppercase tracking-wider text-center bg-pink-50/70 border-r-2 border-rose-300">Shortfall</th>
               <th className="py-4 px-2 text-[11px] font-black text-amber-900 uppercase tracking-wider text-center bg-amber-50/70">In Cart</th>
               <th className="py-4 px-2 text-[11px] font-black text-amber-900 uppercase tracking-wider text-center bg-amber-50/70 border-r-2 border-amber-300">Ordered</th>
-              <th className="py-4 px-2 text-[11px] font-black text-emerald-900 uppercase tracking-wider text-center bg-teal-50/70">No-show</th>
+              <th className="py-4 px-2 text-[11px] font-black text-emerald-900 uppercase tracking-wider text-center bg-teal-50/70">Absent</th>
               <th className="py-4 px-2 text-[11px] font-black text-emerald-900 uppercase tracking-wider text-center bg-teal-50/70">Walk-in</th>
               <th className="py-4 px-2 text-[11px] font-black text-emerald-900 uppercase tracking-wider text-center bg-teal-50/70">Actual Attended</th>
               <th className="py-4 px-2 text-[11px] font-black text-emerald-900 uppercase tracking-wider text-center bg-teal-50/70">Returned</th>
@@ -2006,12 +2010,20 @@ function InventoryTable({ rows, event, updateCell, renameItem, getLatestWalkIn, 
                       <div className="text-[9px] text-amber-700 font-bold mt-1 max-w-[110px] mx-auto italic">Excess → stock</div>
                     )}
                   </td>
+                  {/* ABSENT — locked, sourced live from fa_invitations (status='no_show') */}
                   <td className="py-5 px-2 text-center bg-teal-50/30">
-                    <NumCell value={row.no_show} onSave={v => updateCell(row.id, 'no_show', v)} disabled={postLocked} />
+                    <span className="text-base font-bold text-slate-900 inline-flex items-center gap-1" title="Pulled live from fa_invitations where status = 'no_show'">
+                      {row.no_show}
+                      <span className="text-[8px] text-slate-400">🔒</span>
+                    </span>
                   </td>
+                  {/* WALK-IN — locked, sourced live from fa_invitations (status='walk_in', not yet emitted by FA portal) */}
                   <td className="py-5 px-2 text-center bg-teal-50/30">
-                    <NumCell value={row.walk_in} onSave={v => updateCell(row.id, 'walk_in', v)} disabled={postLocked} />
-                    {!postLocked && row.walk_in > row.buffer && row.walk_in > 0 && (
+                    <span className="text-base font-bold text-slate-900 inline-flex items-center gap-1" title="Pulled live from fa_invitations where status = 'walk_in' (FA portal will start emitting this status soon)">
+                      {row.walk_in}
+                      <span className="text-[8px] text-slate-400">🔒</span>
+                    </span>
+                    {row.walk_in > row.buffer && row.walk_in > 0 && (
                       <div className="text-[9px] text-orange-700 font-bold mt-1 flex items-center justify-center gap-1">
                         ⚠ Exceeded buffer
                       </div>
@@ -2025,7 +2037,17 @@ function InventoryTable({ rows, event, updateCell, renameItem, getLatestWalkIn, 
                   <td className="py-5 px-2 text-center bg-teal-50/30">
                     {postLocked
                       ? <LockedCell />
-                      : <span className="text-base font-semibold text-emerald-900">{d.returned}</span>}
+                      : item.returnable
+                        ? (
+                          <span
+                            className="text-base font-semibold text-emerald-900 inline-flex items-center gap-1"
+                            title="Mirrors Closing Stock for returnable items — edit Closing Stock instead"
+                          >
+                            {d.returned}
+                            <span className="text-[8px] text-slate-400">🔒</span>
+                          </span>
+                        )
+                        : <span className="text-base font-semibold text-emerald-900">{d.returned}</span>}
                   </td>
                   <td className="py-5 px-2 text-center bg-gradient-to-br from-teal-100 to-emerald-200/60 border-l border-teal-200">
                     {postLocked
