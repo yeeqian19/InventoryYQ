@@ -17,36 +17,37 @@ type Region = 'A' | 'B' | 'C' | 'HQ' | 'ALL';
 type Branch = { code: string; name: string; region: Region };
 
 const BRANCH_MASTER_LIST: Branch[] = [
-  // REGION A
-  { code: 'RBY', name: 'Rimbayu', region: 'A' },
-  { code: 'KLG', name: 'Klang', region: 'A' },
-  { code: 'SHA', name: 'Shah Alam', region: 'A' },
-  { code: 'SA',  name: 'Setia Alam', region: 'A' },
+  // REGION A (alphabetical by name)
+  { code: 'AC',  name: 'Anggun City Rawang', region: 'A' },
+  { code: 'RBY', name: 'Bandar Rimbayu', region: 'A' },
   { code: 'DA',  name: 'Denai Alam', region: 'A' },
   { code: 'EGR', name: 'Eco Grandeur', region: 'A' },
+  { code: 'KLG', name: 'Klang', region: 'A' },
+  { code: 'SA',  name: 'Setia Alam', region: 'A' },
+  { code: 'SHA', name: 'Shah Alam', region: 'A' },
   { code: 'ST',  name: 'Subang Taipan', region: 'A' },
-  { code: 'AC',  name: 'Anggun City Rawang', region: 'A' },
-  { code: 'SBY', name: 'Sungai Buloh', region: 'A' },
-  // REGION B
-  { code: 'SLY',  name: 'Selayang', region: 'B' },
-  { code: 'DK',   name: 'Danau Kota', region: 'B' },
-  { code: 'KD',   name: 'Kota Damansara', region: 'B' },
+  { code: 'TSB', name: 'Tropicana Sungai Buloh', region: 'A' },
+  // REGION B (alphabetical by name)
   { code: 'AMP',  name: 'Ampang', region: 'B' },
-  { code: 'SP',   name: 'Sri Petaling', region: 'B' },
   { code: 'BTHO', name: 'Bandar Tun Hussein Onn', region: 'B' },
-  { code: 'KTG',  name: 'Kajang TTDI Groove', region: 'B' },
+  { code: 'DK',   name: 'Danau Kota', region: 'B' },
   { code: 'DSH',  name: 'Desa Sri Hartamas', region: 'B' },
+  { code: 'KTG',  name: 'Kajang TTDI Groove', region: 'B' },
+  { code: 'KD',   name: 'Kota Damansara', region: 'B' },
+  { code: 'PJL',  name: 'Puncak Jalil', region: 'B' },
+  { code: 'SLY',  name: 'Selayang', region: 'B' },
+  { code: 'SP',   name: 'Sri Petaling', region: 'B' },
   { code: 'TSG',  name: 'Taman Sri Gombak', region: 'B' },
-  // REGION C
-  { code: 'PJY', name: 'Putrajaya', region: 'C' },
-  { code: 'KW',  name: 'Kota Warisan', region: 'C' },
+  // REGION C (alphabetical by name)
   { code: 'BBB', name: 'Bandar Baru Bangi', region: 'C' },
-  { code: 'CJY', name: 'Cyberjaya', region: 'C' },
   { code: 'BSP', name: 'Bandar Seri Putra', region: 'C' },
+  { code: 'CJY', name: 'Cyberjaya', region: 'C' },
+  { code: 'KW',  name: 'Kota Warisan', region: 'C' },
+  { code: 'ONL', name: 'Online / Others', region: 'C' },
+  { code: 'PU',  name: 'Puchong Utama', region: 'C' },
+  { code: 'PJY', name: 'Putrajaya', region: 'C' },
   { code: 'SNT', name: 'Senawang Taipan', region: 'C' },
   { code: 'SBN', name: 'Seremban', region: 'C' },
-  { code: 'DP',  name: 'Dataran Puchong Utama', region: 'C' },
-  { code: 'ONL', name: 'Online / Others', region: 'C' },
   // HQ records (e.g. internal / unassigned branch)
   { code: 'HQ', name: 'HQ', region: 'HQ' },
 ];

@@ -36,6 +36,7 @@ export default async function DashboardPage() {
       doc_no: true,
       doc_date: true,
       branch_code: true,
+      student_name: true,
       sk_prep: true,
       eg_prep: true,
       type: true,

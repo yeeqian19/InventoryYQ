@@ -107,3 +107,55 @@ enum Role {
   USER_RM
   USER_BM
 }
+
+/// Marketing item catalog (Certificate, Medal, Sash, Microphone + any custom items).
+/// Per-event sub-rows come from:
+///   - `grades`   — numeric breakdown (e.g. Medal: [1..8])
+///   - `branches` — text breakdown (e.g. Sash: ['ST','BTHO',...])
+/// Empty = single row per event. An item should use grades OR branches, not both.
+/// `returnable` = true for items that come back after the event (Sash). Their
+/// closing_stock formula skips consumption (= in_stock + ordered).
+model fa_marketing_items {
+  id          String                    @id @default(uuid()) @db.Uuid
+  name        String                    @unique @db.VarChar(255)
+  is_default  Boolean                   @default(false)
+  grades      String[]                  @default([])
+  branches    String[]                  @default([])
+  returnable  Boolean                   @default(false)
+  created_at  DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime                  @default(now()) @updatedAt @db.Timestamptz(6)
+  inventory   fa_marketing_inventory[]
+}
+
+/// Per-event per-item-per-grade inventory. event_id is a soft reference to
+/// fa_events.id in ebrightleads_db (cross-DB, no FK constraint).
+/// `grade` is NULL for items without a grade breakdown.
+/// Uniqueness is enforced by a NULLS NOT DISTINCT index created in marketing_grades.sql.
+model fa_marketing_inventory {
+  id              String              @id @default(uuid()) @db.Uuid
+  event_id        String              @db.Uuid
+  item_id         String              @db.Uuid
+  grade           String?
+  branch          String?
+  in_stock        Int                 @default(0)
+  /// True when the user explicitly typed in_stock; false when the system set
+  /// it via auto-carry-forward. Auto-carry only updates rows where this is false.
+  in_stock_manual Boolean             @default(false)
+  /// For returnable items only. NULL = use derived value (in_stock for total_to_bring,
+  /// in_stock + ordered for closing_stock). When set, overrides the derivation.
+  total_to_bring_set        Int?
+  /// Mirrors in_stock_manual: true when user typed the value, false when auto-carry set it.
+  total_to_bring_set_manual Boolean @default(false)
+  closing_stock_set         Int?
+  registered      Int                 @default(0)
+  buffer      Int                 @default(0)
+  in_cart     Int                 @default(0)
+  ordered     Int                 @default(0)
+  no_show     Int                 @default(0)
+  walk_in     Int                 @default(0)
+  created_at  DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+  item        fa_marketing_items  @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@index([event_id])
+}

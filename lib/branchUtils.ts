@@ -5,19 +5,24 @@
 
 export const VALID_BRANCHES = [
   // Region A
-  'AC', 'DA', 'EGR', 'KLG', 'RBY', 'SA', 'SBY', 'SHA', 'ST',
+  'AC', 'DA', 'EGR', 'KLG', 'RBY', 'SA', 'SHA', 'ST', 'TSB',
   // Region B
-  'AMP', 'BTHO', 'DK', 'DSH', 'KD', 'KTG', 'SLY', 'SP', 'TSG',
+  'AMP', 'BTHO', 'DK', 'DSH', 'KD', 'KTG', 'PJL', 'SLY', 'SP', 'TSG',
   // Region C
-  'BBB', 'BSP', 'CJY', 'DP', 'KW', 'ONL', 'PJY', 'SBN', 'SNT',
+  'BBB', 'BSP', 'CJY', 'KW', 'ONL', 'PJY', 'PU', 'SBN', 'SNT',
   // Other
   'HQ',
 ];
 
+// Maps legacy / mistyped codes to the current canonical code.
+// Old invoices may still use the previous code (e.g. SBY for the now-renamed
+// Tropicana Sungai Buloh) — those should still resolve to the correct branch.
 export const BRANCH_CORRECTION_MAP: Record<string, string> = {
   PJ: 'PJY',
   KL: 'KLG',
   'KUALA LUMPUR': 'KLG',
+  SBY: 'TSB',  // legacy Sungai Buloh → Tropicana Sungai Buloh
+  DP:  'PU',   // legacy Dataran Puchong Utama → Puchong Utama
 };
 
 /**
