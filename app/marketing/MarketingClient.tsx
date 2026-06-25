@@ -1569,7 +1569,7 @@ export default function MarketingClient({ userName }: { userName: string; userRo
               <ul className="text-[11px] text-slate-600 font-semibold mt-4 space-y-1 list-disc list-inside">
                 <li>Only auto-set rows are updated (rows you manually typed are locked)</li>
                 <li>Numbers you&rsquo;ve already typed are left untouched</li>
-                <li>Formula: <code className="bg-white px-1.5 py-0.5 rounded text-slate-800">in_stock + ordered − registered − buffer</code></li>
+                <li>Formula: <code className="bg-white px-1.5 py-0.5 rounded text-slate-800">in_stock + ordered − registered − backup_stock</code></li>
               </ul>
             </div>
           </div>
@@ -1686,7 +1686,7 @@ export default function MarketingClient({ userName }: { userName: string; userRo
                   <span className="text-[10px] text-slate-400">🔒 Auto</span>
                 </div>
               </Field>
-              <Field label="Buffer">
+              <Field label="Backup Stock">
                 <input type="number" value={editRowForm.buffer}
                   onChange={e => setEditRowForm(p => ({ ...p, buffer: parseInt(e.target.value) || 0 }))}
                   className={inputCls} />
@@ -1694,7 +1694,7 @@ export default function MarketingClient({ userName }: { userName: string; userRo
               <Field label="Total to Bring (auto)">
                 <div className={`${inputCls} bg-blue-50 text-blue-700 cursor-not-allowed`}>{derived.total_to_bring}</div>
               </Field>
-              <Field label="Shortfall (auto)" full>
+              <Field label="Stock Needed (Not Enough) (auto)" full>
                 {derived.shortfall > 0 ? (
                   <div className={`${inputCls} bg-rose-50 text-rose-700 cursor-not-allowed`}>+{derived.shortfall} to order</div>
                 ) : (
@@ -1885,9 +1885,9 @@ function InventoryTable({ rows, event, updateCell, renameItem, getLatestWalkIn, 
               <th className="py-4 px-2 text-[11px] font-black text-indigo-900 uppercase tracking-wider text-center min-w-[90px] bg-indigo-50/70 border-r-2 border-indigo-200">Group</th>
               <th className="py-4 px-2 text-[11px] font-black text-rose-900 uppercase tracking-wider text-center bg-pink-50/70">In Stock</th>
               <th className="py-4 px-2 text-[11px] font-black text-rose-900 uppercase tracking-wider text-center bg-pink-50/70">Registered</th>
-              <th className="py-4 px-2 text-[11px] font-black text-rose-900 uppercase tracking-wider text-center bg-pink-50/70">Buffer</th>
+              <th className="py-4 px-2 text-[11px] font-black text-rose-900 uppercase tracking-wider text-center bg-pink-50/70">Backup Stock</th>
               <th className="py-4 px-2 text-[11px] font-black text-rose-900 uppercase tracking-wider text-center bg-pink-50/70">Total to Bring</th>
-              <th className="py-4 px-2 text-[11px] font-black text-rose-900 uppercase tracking-wider text-center bg-pink-50/70 border-r-2 border-rose-300">Shortfall</th>
+              <th className="py-4 px-2 text-[11px] font-black text-rose-900 uppercase tracking-wider text-center bg-pink-50/70 border-r-2 border-rose-300">Stock Needed</th>
               <th className="py-4 px-2 text-[11px] font-black text-amber-900 uppercase tracking-wider text-center bg-amber-50/70">In Cart</th>
               <th className="py-4 px-2 text-[11px] font-black text-amber-900 uppercase tracking-wider text-center bg-amber-50/70 border-r-2 border-amber-300">Ordered</th>
               <th className="py-4 px-2 text-[11px] font-black text-emerald-900 uppercase tracking-wider text-center bg-teal-50/70">Absent</th>
@@ -2025,7 +2025,7 @@ function InventoryTable({ rows, event, updateCell, renameItem, getLatestWalkIn, 
                     </span>
                     {row.walk_in > row.buffer && row.walk_in > 0 && (
                       <div className="text-[9px] text-orange-700 font-bold mt-1 flex items-center justify-center gap-1">
-                        ⚠ Exceeded buffer
+                        ⚠ Exceeded backup
                       </div>
                     )}
                   </td>

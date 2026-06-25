@@ -114,7 +114,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ eve
       `${itemId}|${grade ?? 'NULL'}|${branch ?? 'NULL'}`;
     const existingKeys = new Set(existing.map(r => keyFor(r.item_id, r.grade, r.branch)));
 
-    const toCreate: { event_id: string; item_id: string; grade: string | null; branch: string | null }[] = [];
+    // Default Backup Stock (buffer) is 10 for consumable items, 0 for returnable (Sash).
+    // User can still edit freely after creation — this only applies when the row is first created.
+    const toCreate: { event_id: string; item_id: string; grade: string | null; branch: string | null; buffer: number }[] = [];
     for (const it of items) {
       let combos: { grade: string | null; branch: string | null }[];
       if (it.grades.length > 0) {
@@ -124,9 +126,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ eve
       } else {
         combos = [{ grade: null, branch: null }];
       }
+      const defaultBuffer = it.returnable ? 0 : 10;
       for (const c of combos) {
         if (!existingKeys.has(keyFor(it.id, c.grade, c.branch))) {
-          toCreate.push({ event_id: eventId, item_id: it.id, grade: c.grade, branch: c.branch });
+          toCreate.push({ event_id: eventId, item_id: it.id, grade: c.grade, branch: c.branch, buffer: defaultBuffer });
         }
       }
     }
