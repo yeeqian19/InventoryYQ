@@ -2,47 +2,49 @@
 
 import { useState, useRef, useEffect } from 'react';
 
+// Branches within each region are listed alphabetically by branch name.
 export const BRANCH_REGIONS = [
   {
     label: 'Region A',
     branches: [
-      { code: 'RBY', name: 'Rimbayu' },
-      { code: 'KLG', name: 'Klang' },
-      { code: 'SHA', name: 'Shah Alam' },
-      { code: 'SA',  name: 'Setia Alam' },
+      { code: 'AC',  name: 'Anggun City Rawang' },
+      { code: 'RBY', name: 'Bandar Rimbayu' },
       { code: 'DA',  name: 'Denai Alam' },
       { code: 'EGR', name: 'Eco Grandeur' },
+      { code: 'KLG', name: 'Klang' },
+      { code: 'SA',  name: 'Setia Alam' },
+      { code: 'SHA', name: 'Shah Alam' },
       { code: 'ST',  name: 'Subang Taipan' },
-      { code: 'AC',  name: 'Anggun City Rawang' },
-      { code: 'SBY', name: 'Sungai Buloh' },
+      { code: 'TSB', name: 'Tropicana Sungai Buloh' },
     ],
   },
   {
     label: 'Region B',
     branches: [
-      { code: 'SLY',  name: 'Selayang' },
-      { code: 'DK',   name: 'Danau Kota' },
-      { code: 'KD',   name: 'Kota Damansara' },
       { code: 'AMP',  name: 'Ampang' },
-      { code: 'SP',   name: 'Sri Petaling' },
       { code: 'BTHO', name: 'Bandar Tun Hussein Onn' },
-      { code: 'KTG',  name: 'Kajang TTDI Groove' },
+      { code: 'DK',   name: 'Danau Kota' },
       { code: 'DSH',  name: 'Desa Sri Hartamas' },
+      { code: 'KTG',  name: 'Kajang TTDI Groove' },
+      { code: 'KD',   name: 'Kota Damansara' },
+      { code: 'PJL',  name: 'Puncak Jalil' },
+      { code: 'SLY',  name: 'Selayang' },
+      { code: 'SP',   name: 'Sri Petaling' },
       { code: 'TSG',  name: 'Taman Sri Gombak' },
     ],
   },
   {
     label: 'Region C',
     branches: [
-      { code: 'PJY', name: 'Putrajaya' },
-      { code: 'KW',  name: 'Kota Warisan' },
       { code: 'BBB', name: 'Bandar Baru Bangi' },
-      { code: 'CJY', name: 'Cyberjaya' },
       { code: 'BSP', name: 'Bandar Seri Putra' },
+      { code: 'CJY', name: 'Cyberjaya' },
+      { code: 'KW',  name: 'Kota Warisan' },
+      { code: 'ONL', name: 'Online / Others' },
+      { code: 'PU',  name: 'Puchong Utama' },
+      { code: 'PJY', name: 'Putrajaya' },
       { code: 'SNT', name: 'Senawang Taipan' },
       { code: 'SBN', name: 'Seremban' },
-      { code: 'DP',  name: 'Dataran Puchong Utama' },
-      { code: 'ONL', name: 'Online / Others' },
     ],
   },
   {
