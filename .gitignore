@@ -9,6 +9,10 @@ dist/
 web-build/
 expo-env.d.ts
 
+# EAS local credentials (plaintext secrets + keystore — never commit)
+credentials.json
+credentials/
+
 # Native
 .kotlin/
 *.orig.*

@@ -22,11 +22,22 @@
     },
     "production": {
       "autoIncrement": true,
+      "credentialsSource": "local",
       "android": {
         "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://inventory.ebright.my"
+      }
+    },
+    "emulator": {
+      "distribution": "internal",
+      "credentialsSource": "local",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:3001"
       }
     }
   },
