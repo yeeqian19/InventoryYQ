@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import Barcode from '@kichiyaki/react-native-barcode-generator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AccessGate from '@/components/AccessGate';
+import Pagination from '@/components/Pagination';
+import QrCode from '@/components/QrCode';
 import Dropdown from '@/components/Dropdown';
 import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
@@ -15,8 +18,9 @@ import { BRANCH_OPTIONS } from '@/constants/branches';
 const BRANCH_FILTER_OPTIONS = [{ label: 'All Branches', value: '' }, ...BRANCH_OPTIONS];
 
 // Converted from app/student-manager/StudentManagerClient.tsx — mobile adaptation.
-// Table -> student cards. Barcode/QR are placeholders (real codes are for the web-only
-// Print Labels flow). Live data from GET /api/mobile/students (same query as the web page).
+// Table -> student cards. Each card renders a real Code128 barcode + scannable QR of
+// the active SK/EG code (matches the web react-barcode + QRCodeSVG). Live data from
+// GET /api/mobile/students (same query as the web page).
 
 type Stage = { sk_prep?: string; eg_prep?: string; bm_pickup?: string; received?: string };
 type Student = {
@@ -46,6 +50,15 @@ const DATE_OPTIONS = [
   { label: 'Last Month', value: 'lastMonth' },
   { label: 'Custom', value: 'custom' },
 ];
+
+// Mirror the web getSafeBarcodeValue: normalize quotes, strip non-printable ASCII,
+// cap at 25 chars, fall back to a placeholder so CODE128 never fails to encode.
+function getSafeBarcodeValue(code: string | undefined) {
+  if (!code || code === 'N/A' || code.trim() === '') return '000000';
+  let s = code.replace(/['`’]/g, "'").replace(/[“”]/g, '');
+  s = s.replace(/[^\x20-\x7E]/g, '');
+  return s.length > 25 ? s.substring(0, 25).trim() : s;
+}
 
 function packageColor(pkg: string) {
   if (pkg.includes('12M')) return 'bg-purple-100 text-purple-700';
@@ -106,10 +119,15 @@ function StudentManagerScreenInner() {
   }, [data, search, typeFilter, activeSystem, branch]);
 
   // Display pagination (default 50 + dropdown + load-more), reset when filters change.
-  const { shown, pageSize, setPageSize, loadMore, hasMore, total } = usePagedList(
+  const { shown, page, setPage, totalPages, pageSize, setPageSize, total, rangeStart, rangeEnd } = usePagedList(
     students,
     `${search}|${typeFilter}|${branch}|${range.start}|${range.end}|${activeSystem}`,
   );
+  const listRef = useRef<FlatList<Student>>(null);
+  const goToPage = (p: number) => {
+    setPage(Math.min(Math.max(1, p), totalPages));
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
 
   const toggle = (id: string) => setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
@@ -147,17 +165,22 @@ function StudentManagerScreenInner() {
         {/* CODE + QR placeholder */}
         <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-slate-50">
           <View className="flex-1">
-            {/* Decorative barcode stripes */}
-            <View className="flex-row h-8 items-stretch gap-px">
-              {Array.from({ length: 28 }).map((_, i) => (
-                <View key={i} className="bg-slate-800" style={{ width: i % 3 === 0 ? 3 : 1 }} />
-              ))}
-            </View>
+            <Barcode
+              value={getSafeBarcodeValue(code)}
+              format="CODE128"
+              maxWidth={220}
+              height={36}
+              lineColor="#0f172a"
+              background="#ffffff"
+            />
             <Text className="text-[9px] font-mono font-bold text-slate-500 uppercase mt-1">{code}</Text>
           </View>
-          <View className="w-12 h-12 ml-3 border border-slate-200 rounded-lg items-center justify-center">
-            <Text className="text-[7px] font-black text-slate-300">QR</Text>
-          </View>
+          {code ? (
+            <View className="ml-3 bg-white border border-slate-200 rounded-lg p-1.5">
+              {/* Byte-identical to the web QRCodeSVG (vendored qrcode.react encoder) */}
+              <QrCode value={code} size={44} />
+            </View>
+          ) : null}
         </View>
       </Pressable>
     );
@@ -166,11 +189,10 @@ function StudentManagerScreenInner() {
   return (
     <SafeAreaView className="flex-1 bg-surface-appBg" edges={['top']}>
       <FlatList
+        ref={listRef}
         data={!loading && !error ? shown : []}
         keyExtractor={(s) => s.id}
         renderItem={renderStudent}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.6}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="p-4 pb-10"
@@ -218,7 +240,7 @@ function StudentManagerScreenInner() {
 
             {/* SELECTION BAR */}
             <View className="flex-row items-center justify-between px-1">
-              <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{shown.length} of {total} Students</Text>
+              <Text className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{rangeStart}–{rangeEnd} of {total} Students</Text>
               {selected.length > 0 && (
                 <Text className="text-[11px] font-black text-blue-600 uppercase tracking-widest">{selected.length} selected</Text>
               )}
@@ -237,16 +259,10 @@ function StudentManagerScreenInner() {
         ListFooterComponent={
           !loading && !error && students.length > 0 ? (
             <View className="gap-3">
-              {hasMore && (
-                <Pressable onPress={loadMore} className="bg-slate-900 rounded-2xl py-3 active:opacity-90">
-                  <Text className="text-[11px] font-black text-white text-center uppercase tracking-widest">
-                    Load more ({shown.length} of {total})
-                  </Text>
-                </Pressable>
-              )}
+              <Pagination page={page} totalPages={totalPages} onChange={goToPage} />
               <View className="bg-emerald-50 rounded-2xl p-3">
                 <Text className="text-[10px] font-bold text-emerald-700 text-center">
-                  Print Labels is a desktop feature — barcode/QR generation comes later (react-native-qrcode-svg).
+                  Each card shows the {activeSystem} barcode + a scannable QR. Bulk Print Labels remains a desktop feature.
                 </Text>
               </View>
             </View>

@@ -86,7 +86,10 @@ export default function DateFilter({
         <DateTimePicker
           value={new Date(`${(picking === 'start' ? start : end) || today}T00:00:00`)}
           mode="date"
-          onChange={(_e, d) => onPick(picking, d)}
+          // SDK 56's datetimepicker deprecated `onChange`; use onValueChange (a pick)
+          // + onDismiss (cancel). onValueChange always carries a date, so no undefined check.
+          onValueChange={(_e, d) => onPick(picking, d)}
+          onDismiss={() => setPicking(null)}
         />
       )}
     </View>

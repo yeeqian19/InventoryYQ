@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AccessGate from '@/components/AccessGate';
+import Pagination from '@/components/Pagination';
 import Dropdown from '@/components/Dropdown';
 import DateFilter from '@/components/DateFilter';
 import ScreenState from '@/components/ScreenState';
@@ -68,10 +69,15 @@ function ScanLogScreenInner() {
   );
 
   // Display pagination (default 50 + dropdown + load-more), reset when filters change.
-  const { shown, pageSize, setPageSize, loadMore, hasMore, total } = usePagedList(
+  const { shown, page, setPage, totalPages, pageSize, setPageSize, total, rangeStart, rangeEnd } = usePagedList(
     logs,
     `${search}|${range.start}|${range.end}`,
   );
+  const listRef = useRef<FlatList<Log>>(null);
+  const goToPage = (p: number) => {
+    setPage(Math.min(Math.max(1, p), totalPages));
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
 
   const renderLog = ({ item: l }: { item: Log }) => (
     <View className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-4">
@@ -100,11 +106,10 @@ function ScanLogScreenInner() {
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
       <FlatList
+        ref={listRef}
         data={!loading && !error ? shown : []}
         keyExtractor={(l) => String(l.id)}
         renderItem={renderLog}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.6}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="p-4 pb-10"
@@ -138,21 +143,13 @@ function ScanLogScreenInner() {
               </View>
             </View>
 
-            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{shown.length} of {total} logs</Text>
+            <Text className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">{rangeStart}–{rangeEnd} of {total} logs</Text>
 
             {/* LOADING / ERROR */}
             <ScreenState loading={loading} error={error} onRetry={reload} />
           </View>
         }
-        ListFooterComponent={
-          hasMore ? (
-            <Pressable onPress={loadMore} className="bg-slate-900 rounded-2xl py-3 active:opacity-90">
-              <Text className="text-[11px] font-black text-white text-center uppercase tracking-widest">
-                Load more ({shown.length} of {total})
-              </Text>
-            </Pressable>
-          ) : null
-        }
+        ListFooterComponent={<Pagination page={page} totalPages={totalPages} onChange={goToPage} />}
         ListEmptyComponent={
           !loading && !error ? (
             <View className="items-center py-16">
